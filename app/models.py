@@ -1,0 +1,219 @@
+from app.extensions import db, login_manager
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime, time, timedelta
+import uuid
+import numpy as np
+import os
+
+@login_manager.user_loader
+def load_user(user_id):
+   return User.query.get(int(user_id))
+
+class User(db.Model, UserMixin):
+   id = db.Column(db.Integer, primary_key=True)
+   username = db.Column(db.String(80), unique=True, nullable=False)
+   email = db.Column(db.String(120), unique=True, nullable=False)
+   password_hash = db.Column(db.String(128))
+   role = db.Column(db.String(20), nullable=False)  # admin, lecturer, class_rep
+   face_encoding = db.Column(db.LargeBinary, nullable=True)
+   fingerprint_data = db.Column(db.LargeBinary, nullable=True)
+   
+   # Enhanced fingerprint storage for multiple fingers
+   fingerprint_right_index = db.Column(db.Text, nullable=True)
+   fingerprint_right_thumb = db.Column(db.Text, nullable=True)
+   fingerprint_left_index = db.Column(db.Text, nullable=True)
+   fingerprint_left_thumb = db.Column(db.Text, nullable=True)
+   
+   preferred_biometric = db.Column(db.String(20), default='fingerprint')  # face, fingerprint
+   sessions = db.relationship('Session', backref='lecturer', lazy=True, foreign_keys='Session.lecturer_id')
+   verified_sessions = db.relationship('Session', backref='verifier', lazy=True, foreign_keys='Session.verified_by')
+   attendance_records = db.relationship('StaffAttendance', backref='staff', lazy=True)
+   biometric_logs = db.relationship('BiometricLog', backref='user', lazy=True)
+   
+   # Additional fields for lecturers
+   employee_number = db.Column(db.String(20), nullable=True)
+   first_name = db.Column(db.String(50), nullable=True)
+   last_name = db.Column(db.String(50), nullable=True)
+   department = db.Column(db.String(100), nullable=True)
+   
+   def set_password(self, password):
+       self.password_hash = generate_password_hash(password)
+       
+   def check_password(self, password):
+       return check_password_hash(self.password_hash, password)
+   
+   def set_face_encoding(self, encoding):
+       self.face_encoding = encoding
+       
+   def get_face_encoding(self):
+       if self.face_encoding:
+           return np.frombuffer(self.face_encoding, dtype=np.float64)
+       return None
+   
+   def set_fingerprint_data(self, data):
+       self.fingerprint_data = data
+       
+   def get_fingerprint_data(self):
+       if self.fingerprint_data:
+           return np.frombuffer(self.fingerprint_data, dtype=np.float64)
+       return None
+       
+   def get_full_name(self):
+       if self.first_name and self.last_name:
+           return f"{self.first_name} {self.last_name}"
+       return self.username
+   
+   def get_today_attendance(self):
+       """Get today's attendance record for the staff member"""
+       today = datetime.now().date()
+       return StaffAttendance.query.filter_by(
+           staff_id=self.id,
+           date=today
+       ).first()
+   
+   def is_clocked_in(self):
+       """Check if the staff member is currently clocked in"""
+       attendance = self.get_today_attendance()
+       return attendance and attendance.clock_in and not attendance.clock_out
+   
+   def has_enrolled_fingerprints(self):
+       """Check if the user has enrolled fingerprints"""
+       return bool(self.fingerprint_right_index or 
+                  self.fingerprint_right_thumb or 
+                  self.fingerprint_left_index or 
+                  self.fingerprint_left_thumb)
+
+class Course(db.Model):
+   id = db.Column(db.Integer, primary_key=True)
+   code = db.Column(db.String(20), unique=True, nullable=False)
+   name = db.Column(db.String(100), nullable=False)
+   sessions = db.relationship('Session', backref='course', lazy=True)
+
+class Session(db.Model):
+   id = db.Column(db.Integer, primary_key=True)
+   session_id = db.Column(db.String(36), unique=True, default=lambda: str(uuid.uuid4()))
+   course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
+   lecturer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+   start_time = db.Column(db.DateTime, nullable=True)
+   end_time = db.Column(db.DateTime, nullable=True)
+   status = db.Column(db.String(20), default='pending')  # pending, ongoing, completed, verified
+   classroom = db.Column(db.String(50), nullable=False)
+   verified_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+   lecturer_signature = db.Column(db.Text, nullable=True)
+   rep_signature = db.Column(db.Text, nullable=True)
+   
+   def duration_minutes(self):
+       if self.start_time and self.end_time:
+           delta = self.end_time - self.start_time
+           return delta.total_seconds() / 60
+       return 0
+
+class Report(db.Model):
+   id = db.Column(db.Integer, primary_key=True)
+   title = db.Column(db.String(200), nullable=False)
+   filename = db.Column(db.String(255), nullable=False)
+   filepath = db.Column(db.String(255), nullable=False)
+   format = db.Column(db.String(20), nullable=False)  # csv, xlsx, json
+   created_at = db.Column(db.DateTime, default=datetime.now)
+   file_size = db.Column(db.Integer, nullable=False)  # Size in bytes
+   description = db.Column(db.Text, nullable=True)
+   created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+   
+   # Relationship with the user who created the report
+   user = db.relationship('User', backref='reports')
+   
+   def get_formatted_size(self):
+       """Return human-readable file size"""
+       size = self.file_size
+       for unit in ['B', 'KB', 'MB', 'GB']:
+           if size < 1024 or unit == 'GB':
+               return f"{size:.2f} {unit}"
+           size /= 1024
+   
+   def delete_file(self):
+       """Delete the physical file from the filesystem"""
+       if os.path.exists(self.filepath):
+           os.remove(self.filepath)
+           return True
+       return False
+
+class StaffAttendance(db.Model):
+   id = db.Column(db.Integer, primary_key=True)
+   staff_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+   date = db.Column(db.Date, nullable=False, default=datetime.now().date)
+   clock_in = db.Column(db.DateTime, nullable=True)
+   clock_out = db.Column(db.DateTime, nullable=True)
+   status = db.Column(db.String(20), default='present')  # present, absent, late, half-day
+   notes = db.Column(db.Text, nullable=True)
+   location = db.Column(db.String(100), nullable=True)
+   
+   # New fields for biometric verification
+   clock_in_verified = db.Column(db.Boolean, default=False)
+   clock_out_verified = db.Column(db.Boolean, default=False)
+   clock_in_ip = db.Column(db.String(45), nullable=True)  # IPv6 can be up to 45 chars
+   clock_out_ip = db.Column(db.String(45), nullable=True)
+   clock_in_device = db.Column(db.String(255), nullable=True)
+   clock_out_device = db.Column(db.String(255), nullable=True)
+   
+   # Define standard work hours
+   WORK_START_TIME = time(8, 0)  # 8:00 AM
+   WORK_END_TIME = time(17, 0)   # 5:00 PM
+   LATE_THRESHOLD = time(8, 30)  # 8:30 AM
+   
+   def __init__(self, **kwargs):
+       super(StaffAttendance, self).__init__(**kwargs)
+       # Set status based on clock-in time
+       if self.clock_in:
+           if self.clock_in.time() > self.LATE_THRESHOLD:
+               self.status = 'late'
+   
+   def get_work_duration(self):
+       """Calculate the duration of work in hours"""
+       if not self.clock_in:
+           return 0
+       
+       end_time = self.clock_out or datetime.now()
+       delta = end_time - self.clock_in
+       return round(delta.total_seconds() / 3600, 2)  # Convert to hours
+   
+   def is_late(self):
+       """Check if the staff member was late"""
+       return self.clock_in and self.clock_in.time() > self.LATE_THRESHOLD
+   
+   def is_early_departure(self):
+       """Check if the staff member left early"""
+       return self.clock_out and self.clock_out.time() < self.WORK_END_TIME
+   
+   def get_status_badge(self):
+       """Return a Bootstrap badge class based on status"""
+       if self.status == 'present':
+           return 'bg-success'
+       elif self.status == 'late':
+           return 'bg-warning text-dark'
+       elif self.status == 'absent':
+           return 'bg-danger'
+       elif self.status == 'half-day':
+           return 'bg-info'
+       return 'bg-secondary'
+
+class BiometricLog(db.Model):
+   id = db.Column(db.Integer, primary_key=True)
+   user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+   timestamp = db.Column(db.DateTime, default=datetime.now)
+   action = db.Column(db.String(50), nullable=False)  # enroll, verify_clock_in, verify_clock_out
+   finger_position = db.Column(db.String(20), nullable=True)  # right_index, right_thumb, etc.
+   status = db.Column(db.String(20), nullable=False)  # success, failed
+   ip_address = db.Column(db.String(45), nullable=True)
+   device_info = db.Column(db.Text, nullable=True)
+   details = db.Column(db.Text, nullable=True)  # JSON string with additional details
+   
+   def get_details_dict(self):
+       """Return details as a dictionary"""
+       if self.details:
+           try:
+               return json.loads(self.details)
+           except:
+               pass
+       return {}
+

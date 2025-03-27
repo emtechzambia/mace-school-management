@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}Calendar - School Management System{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css" rel="stylesheet">
+<style>
+    .fc-event {
+        cursor: pointer;
+    }
+    .fc-toolbar-title {
+        font-size: 1.5rem !important;
+    }
+    .event-details {
+        margin-bottom: 0;
+    }
+    .event-details dt {
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="p-3 border-bottom">
+            <h4 class="mb-0">School Management</h4>
+            <small>{{ current_user.role.capitalize() }} Dashboard</small>
+        </div>
+        <div class="mt-3">
+            {% if current_user.role == 'admin' %}
+                <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link">
+                    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                </a>
+                <a href="{{ url_for('admin.register_user') }}" class="sidebar-link">
+                    <i class="fas fa-user-plus me-2"></i> Register User
+                </a>
+                <a href="{{ url_for('admin.register_course') }}" class="sidebar-link">
+                    <i class="fas fa-book me-2"></i> Register Course
+                </a>
+                <a href="{{ url_for('admin.create_session') }}" class="sidebar-link">
+                    <i class="fas fa-calendar-plus me-2"></i> Create Session
+                </a>
+                <a href="{{ url_for('admin.reports') }}" class="sidebar-link">
+                    <i class="fas fa-chart-bar me-2"></i> Reports
+                </a>
+            {% elif current_user.role == 'lecturer' %}
+                <a href="{{ url_for('lecturer.dashboard') }}" class="sidebar-link">
+                    <i class="fas fa-url_for('lecturer.dashboard')}}" class="sidebar-link">
+                    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                </a>
+            {% elif current_user.role == 'class_rep' %}
+                <a href="{{ url_for('class_rep.dashboard') }}" class="sidebar-link">
+                    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                </a>
+            {% endif %}
+            
+            <a href="{{ url_for('calendar.index') }}" class="sidebar-link active">
+                <i class="fas fa-calendar-alt me-2"></i> Calendar
+            </a>
+            
+            <a href="{{ url_for('profile.index') }}" class="sidebar-link">
+                <i class="fas fa-user-cog me-2"></i> Profile
+            </a>
+            
+            <a href="{{ url_for('auth.logout') }}" class="sidebar-link mt-5">
+                <i class="fas fa-sign-out-alt me-2"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content flex-grow-1">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <h2 class="mb-4">Session Calendar</h2>
+        
+        <div class="card card-dashboard">
+            <div class="card-body">
+                <div id="calendar"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Event Details Modal -->
+<div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="eventTitle">Session Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <dl class="row event-details">
+                    <dt class="col-sm-4">Course:</dt>
+                    <dd class="col-sm-8" id="eventCourse"></dd>
+                    
+                    <dt class="col-sm-4">Lecturer:</dt>
+                    <dd class="col-sm-8" id="eventLecturer"></dd>
+                    
+                    <dt class="col-sm-4">Classroom:</dt>
+                    <dd class="col-sm-8" id="eventClassroom"></dd>
+                    
+                    <dt class="col-sm-4">Date:</dt>
+                    <dd class="col-sm-8" id="eventDate"></dd>
+                    
+                    <dt class="col-sm-4">Time:</dt>
+                    <dd class="col-sm-8" id="eventTime"></dd>
+                    
+                    <dt class="col-sm-4">Status:</dt>
+                    <dd class="col-sm-8" id="eventStatus"></dd>
+                </dl>
+            </div>
+            <div class="modal-footer" id="eventActions">
+                <!-- Dynamic buttons will be added here based on session status and user role -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const calendarEl = document.getElementById('calendar');
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            events: "{{ url_for('calendar.events') }}",
+            eventTimeFormat: {
+                hour: '2-digit',
+                minute: '2-digit',
+                meridiem: 'short'
+            },
+            eventClick: function(info) {
+                showEventDetails(info.event);
+            }
+        });
+        calendar.render();
+        
+        // Function to show event details in modal
+        function showEventDetails(event) {
+            const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+            const props = event.extendedProps;
+            
+            // Format date and time
+            const start = new Date(event.start);
+            const end = new Date(event.end);
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const timeOptions = { hour: '2-digit', minute: '2-digit' };
+            
+            // Set modal content
+            document.getElementById('eventTitle').textContent = props.course;
+            document.getElementById('eventCourse').textContent = props.course;
+            document.getElementById('eventLecturer').textContent = props.lecturer;
+            document.getElementById('eventClassroom').textContent = props.classroom;
+            document.getElementById('eventDate').textContent = start.toLocaleDateString(undefined, dateOptions);
+            document.getElementById('eventTime').textContent = `${start.toLocaleTimeString(undefined, timeOptions)} - ${end.toLocaleTimeString(undefined, timeOptions)}`;
+            
+            // Set status with badge
+            const statusEl = document.getElementById('eventStatus');
+            let statusBadge = '';
+            
+            if (props.status === 'pending') {
+                statusBadge = '<span class="badge bg-warning text-dark">Pending</span>';
+            } else if (props.status === 'ongoing') {
+                statusBadge = '<span class="badge bg-primary">Ongoing</span>';
+            } else if (props.status === 'completed') {
+                statusBadge = '<span class="badge bg-secondary">Completed</span>';
+            } else if (props.status === 'verified') {
+                statusBadge = '<span class="badge bg-success">Verified</span>';
+            }
+            
+            statusEl.innerHTML = statusBadge;
+            
+            // Set action buttons based on user role and session status
+            const actionsEl = document.getElementById('eventActions');
+            actionsEl.innerHTML = '';
+            
+            // Add appropriate action buttons based on user role and session status
+            {% if current_user.role == 'lecturer' %}
+                if (props.status === 'pending') {
+                    const startBtn = document.createElement('button');
+                    startBtn.className = 'btn btn-success';
+                    startBtn.innerHTML = '<i class="fas fa-play me-2"></i>Start Session';
+                    startBtn.onclick = function() {
+                        window.location.href = "{{ url_for('lecturer.dashboard') }}#upcoming";
+                    };
+                    actionsEl.appendChild(startBtn);
+                } else if (props.status === 'ongoing') {
+                    const endBtn = document.createElement('button');
+                    endBtn.className = 'btn btn-danger';
+                    endBtn.innerHTML = '<i class="fas fa-stop me-2"></i>End Session';
+                    endBtn.onclick = function() {
+                        window.location.href = "{{ url_for('lecturer.dashboard') }}#active";
+                    };
+                    actionsEl.appendChild(endBtn);
+                }
+            {% elif current_user.role == 'class_rep' %}
+                if (props.status === 'completed') {
+                    const verifyBtn = document.createElement('button');
+                    verifyBtn.className = 'btn btn-success';
+                    verifyBtn.innerHTML = '<i class="fas fa-check me-2"></i>Verify Session';
+                    verifyBtn.onclick = function() {
+                        window.location.href = "{{ url_for('class_rep.dashboard') }}#completed";
+                    };
+                    actionsEl.appendChild(verifyBtn);
+                }
+            {% endif %}
+            
+            // Add close button
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'btn btn-secondary';
+            closeBtn.textContent = 'Close';
+            closeBtn.setAttribute('data-bs-dismiss', 'modal');
+            actionsEl.appendChild(closeBtn);
+            
+            modal.show();
+        }
+    });
+</script>
+{% endblock %}
+

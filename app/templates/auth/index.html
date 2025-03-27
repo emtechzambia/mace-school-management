@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}Mansa College of Education Staff Attendance Recording System{% endblock %}
+{% block extra_css %}
+<style>
+    body {
+        background-color: #f8f9fa;
+        font-family: 'Open Sans', sans-serif;
+    }
+    .hero-section {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+        color: white;
+        padding: 100px 0;
+        border-radius: 0 0 20px 20px;
+        position: relative;
+        overflow: hidden;
+    }
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICAgIDxjaXJjbGUgY3g9IjEwIiBjeT0iMTAiIHI9IjEwIiBmaWxsPSJyZ2JhKDI1NSwgMjU1LCAyNTUsIDAuMDUpIiAvPgogICAgPGNpcmNsZSBjeD0iNTAiIGN5PSIzMCIgcj0iMTUiIGZpbGw9InJnYmEoMjU1LCAyNTUsIDI1NSwgMC4wMykiIC8+CiAgICA8Y2lyY2xlIGN4PSI5MCIgY3k9IjQwIiByPSIyMCIgZmlsbD0icmdiYSgyNTUsIDI1NSwgMjU1LCAwLjA0KSIgLz4KICAgIDxjaXJjbGUgY3g9IjMwIiBjeT0iNzAiIHI9IjEyIiBmaWxsPSJyZ2JhKDI1NSwgMjU1LCAyNTUsIDAuMDIpIiAvPgogICAgPGNpcmNsZSBjeD0iNzAiIGN5PSI4MCIgcj0iMTgiIGZpbGw9InJnYmEoMjU1LCAyNTUsIDI1NSwgMC4wMykiIC8+Cjwvc3ZnPg==');
+        opacity: 0.3;
+    }
+    .hero-content {
+        position: relative;
+        z-index: 1;
+    }
+    .hero-title {
+        font-weight: 800;
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+    .hero-subtitle {
+        font-weight: 300;
+        font-size: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .hero-btn {
+        padding: 12px 30px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border-radius: 50px;
+        transition: all 0.3s;
+    }
+    .hero-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+    .feature-card {
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        transition: transform 0.3s ease;
+        height: 100%;
+        border: none;
+        padding: 30px;
+        margin-top: 30px;
+    }
+    .feature-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    }
+    .feature-icon {
+        font-size: 3rem;
+        margin-bottom: 1.5rem;
+        color: #0d6efd;
+        background: rgba(13, 110, 253, 0.1);
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+    }
+    .feature-title {
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+    .feature-text {
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <a class="navbar-brand" href="#">
+            <i class="fas fa-graduation-cap me-2"></i>Mansa College
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link active" href="{{ url_for('auth.index') }}">
+                        <i class="fas fa-home me-1"></i> Home
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('auth.login') }}">
+                        <i class="fas fa-sign-in-alt me-1"></i> Login
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<section class="hero-section">
+    <div class="container hero-content text-center">
+        <h1 class="hero-title">Staff Attendance Recording System</h1>
+        <p class="hero-subtitle">Track lecture attendance, manage class sessions, and ensure accountability</p>
+        <a href="{{ url_for('auth.login') }}" class="btn btn-light btn-lg hero-btn">
+            <i class="fas fa-sign-in-alt me-2"></i>Get Started
+        </a>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">Key Features</h2>
+            <p class="text-muted">Our comprehensive system offers everything you need for effective attendance management</p>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card feature-card text-center">
+                    <div class="feature-icon">
+                        <i class="fas fa-fingerprint"></i>
+                    </div>
+                    <h4 class="feature-title">Biometric Authentication</h4>
+                    <p class="feature-text">Secure access with facial recognition and fingerprint technology</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card feature-card text-center">
+                    <div class="feature-icon">
+                        <i class="fas fa-user-clock"></i>
+                    </div>
+                    <h4 class="feature-title">Session Tracking</h4>
+                    <p class="feature-text">Monitor lecture start and end times accurately</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card feature-card text-center">
+                    <div class="feature-icon">
+                        <i class="fas fa-signature"></i>
+                    </div>
+                    <h4 class="feature-title">E-Signature Verification</h4>
+                    <p class="feature-text">Class representatives verify session details</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card feature-card text-center">
+                    <div class="feature-icon">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <h4 class="feature-title">Role-Based Access</h4>
+                    <p class="feature-text">Different permissions for admin, lecturers, and class reps</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card feature-card text-center">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h4 class="feature-title">Comprehensive Reports</h4>
+                    <p class="feature-text">Generate detailed reports on lecturer attendance</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card feature-card text-center">
+                    <div class="feature-icon">
+                        <i class="fas fa-tachometer-alt"></i>
+                    </div>
+                    <h4 class="feature-title">Real-time Dashboard</h4>
+                    <p class="feature-text">Monitor ongoing classes and session status</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-6 mb-4 mb-md-0">
+                <h2 class="fw-bold mb-4">Why Choose Our System?</h2>
+                <p class="mb-4">Our Staff Attendance Recording System provides a comprehensive solution for educational institutions to track and manage lecture attendance efficiently.</p>
+                <ul class="list-unstyled">
+                    <li class="mb-3">
+                        <i class="fas fa-check-circle text-primary me-2"></i>
+                        <strong>Enhanced Accountability</strong> - Verify lecture sessions with biometric data
+                    </li>
+                    <li class="mb-3">
+                        <i class="fas fa-check-circle text-primary me-2"></i>
+                        <strong>Improved Reporting</strong> - Generate detailed attendance reports
+                    </li>
+                    <li class="mb-3">
+                        <i class="fas fa-check-circle text-primary me-2"></i>
+                        <strong>Streamlined Workflow</strong> - Automate attendance tracking processes
+                    </li>
+                    <li class="mb-3">
+                        <i class="fas fa-check-circle text-primary me-2"></i>
+                        <strong>Data Security</strong> - Protect sensitive information with secure authentication
+                    </li>
+                </ul>
+                <a href="{{ url_for('auth.login') }}" class="btn btn-primary mt-3">
+                    <i class="fas fa-sign-in-alt me-2"></i>Login Now
+                </a>
+            </div>
+            <div class="col-md-6">
+                <img src="/placeholder.svg?height=400&width=600" alt="System Dashboard" class="img-fluid rounded shadow">
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

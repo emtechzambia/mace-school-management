@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+{% block title %}Biometric Verification - Mansa College of Education Staff Attendance Recording System{% endblock %}
+{% block extra_css %}
+<style>
+    .verification-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    .verification-container {
+        max-width: 800px;
+        width: 100%;
+        padding: 20px;
+    }
+    .verification-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    .verification-header {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+        color: white;
+        padding: 30px 20px;
+        text-align: center;
+    }
+    .verification-logo {
+        width: 80px;
+        height: 80px;
+        background-color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 15px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+    .verification-logo i {
+        font-size: 40px;
+        color: #0d6efd;
+    }
+    .verification-content {
+        padding: 30px;
+    }
+    .alert {
+        border-radius: 10px;
+        border: none;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .alert-danger {
+        background-color: #f8d7da;
+        color: #842029;
+    }
+    .verification-footer {
+        text-align: center;
+        margin-top: 20px;
+    }
+    .verification-footer a {
+        color: #0d6efd;
+        text-decoration: none;
+        transition: all 0.3s;
+    }
+    .verification-footer a:hover {
+        color: #0a58ca;
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="verification-page">
+    <div class="verification-container">
+        <div class="card verification-card">
+            <div class="verification-header">
+                <div class="verification-logo">
+                    <i class="fas fa-fingerprint"></i>
+                </div>
+                <h3 class="mb-1">Biometric Verification</h3>
+                <p class="mb-0">Please verify your identity to continue</p>
+            </div>
+            <div class="verification-content">
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-circle me-2"></i>{{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                
+                <div class="text-center mb-4">
+                    <p>Please select your preferred biometric verification method</p>
+                </div>
+                
+                <ul class="nav nav-tabs biometric-tabs mb-4" id="biometricTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="face-tab" data-bs-toggle="tab" data-bs-target="#face" type="button" role="tab" aria-controls="face" aria-selected="true">
+                            <i class="fas fa-user me-2"></i>Facial Recognition
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="fingerprint-tab" data-bs-toggle="tab" data-bs-target="#fingerprint" type="button" role="tab" aria-controls="fingerprint" aria-selected="false">
+                            <i class="fas fa-fingerprint me-2"></i>Fingerprint
+                        </button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content" id="biometricTabsContent">
+                    <!-- Facial Recognition Tab -->
+                    <div class="tab-pane fade show active" id="face" role="tabpanel" aria-labelledby="face-tab">
+                        <div class="text-center mb-3">
+                            <p>Please look at the camera for facial recognition</p>
+                        </div>
+                        
+                        <div class="position-relative mb-4">
+                            <video id="video" autoplay></video>
+                            <canvas id="canvas"></canvas>
+                            <div class="scanning-overlay" id="scanningOverlay"></div>
+                        </div>
+                        
+                        <form method="POST" action="{{ url_for('auth.biometric_verification') }}" id="faceForm">
+                            <input type="hidden" name="biometric_type" value="face">
+                            <input type="hidden" name="image_data" id="imageData">
+                            <div class="d-flex justify-content-center mb-3">
+                                <div class="capture-btn" id="captureBtn"></div>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary" id="verifyFaceBtn" disabled>
+                                    <i class="fas fa-check-circle me-2"></i>Verify with Face
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Fingerprint Tab -->
+                    <div class="tab-pane fade" id="fingerprint" role="tabpanel" aria-labelledby="fingerprint-tab">
+                        <div class="text-center mb-3">
+                            <p>Please place your finger on the scanner</p>
+                        </div>
+                        
+                        <div class="fingerprint-scanner mb-4">
+                            <i class="fas fa-fingerprint fingerprint-icon"></i>
+                            <div class="fingerprint-status" id="fingerprintStatus"></div>
+                        </div>
+                        
+                        <div class="text-center mb-3">
+                            <p id="fingerprintMessage">Waiting for fingerprint...</p>
+                        </div>
+                        
+                        <form method="POST" action="{{ url_for('auth.biometric_verification') }}" id="fingerprintForm">
+                            <input type="hidden" name="biometric_type" value="fingerprint">
+                            <input type="hidden" name="fingerprint_data" id="fingerprintData">
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary" id="verifyFingerprintBtn" disabled>
+                                    <i class="fas fa-check-circle me-2"></i>Verify with Fingerprint
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <div class="form-check form-switch d-inline-block">
+                        <input class="form-check-input" type="checkbox" id="rememberBiometric">
+                        <label class="form-check-label" for="rememberBiometric">Remember my preferred biometric method</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="verification-footer">
+            <a href="{{ url_for('auth.logout') }}">
+                <i class="fas fa-sign-out-alt me-1"></i> Cancel and Logout
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let webcamStream = null;
+    let fingerprintSimulation = null;
+    
+    // Start webcam when face tab is shown
+    document.getElementById('face-tab').addEventListener('click', function() {
+        startVideo();
+    });
+    
+    // Stop webcam when fingerprint tab is shown
+    document.getElementById('fingerprint-tab').addEventListener('click', function() {
+        stopVideo();
+        startFingerprintSimulation();
+    });
+    
+    // Start webcam when page loads (since face tab is active by default)
+    window.addEventListener('load', async function() {
+        // Set active tab based on user preference if available
+        const preferredBiometric = '{{ current_user.preferred_biometric }}';
+        if (preferredBiometric === 'fingerprint') {
+            document.getElementById('fingerprint-tab').click();
+        } else {
+            startVideo();
+        }
+    });
+    
+    // Access webcam
+    async function startVideo() {
+        try {
+            webcamStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const video = document.getElementById('video');
+            video.srcObject = webcamStream;
+            document.getElementById('scanningOverlay').style.display = 'block';
+        } catch (err) {
+            console.error('Error accessing webcam:', err);
+            alert('Error accessing webcam. Please make sure your camera is connected and permissions are granted.');
+        }
+    }
+    
+    // Stop webcam
+    function stopVideo() {
+        if (webcamStream) {
+            webcamStream.getTracks().forEach(track => track.stop());
+            const video = document.getElementById('video');
+            video.srcObject = null;
+            document.getElementById('scanningOverlay').style.display = 'none';
+        }
+    }
+    
+    // Capture image from webcam
+    document.getElementById('captureBtn').addEventListener('click', function() {
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Convert canvas to base64 image data
+        const data = canvas.toDataURL('image/png');
+        document.getElementById('imageData').value = data;
+        
+        // Enable verify button
+        document.getElementById('verifyFaceBtn').disabled = false;
+        
+        // Visual feedback
+        this.style.borderColor = '#198754';
+        this.style.backgroundColor = '#d1e7dd';
+    });
+    
+    // Simulate fingerprint scanning
+    function startFingerprintSimulation() {
+        const fingerprintStatus = document.getElementById('fingerprintStatus');
+        const fingerprintMessage = document.getElementById('fingerprintMessage');
+        const verifyFingerprintBtn = document.getElementById('verifyFingerprintBtn');
+        
+        // Reset status
+        fingerprintStatus.classList.remove('active');
+        fingerprintMessage.textContent = 'Waiting for fingerprint...';
+        verifyFingerprintBtn.disabled = true;
+        
+        // Prompt user to place finger
+        fingerprintMessage.textContent = 'Place your finger on the scanner';
+        
+        // Simulate scanning after a short delay
+        setTimeout(() => {
+            let scanProgress = 0;
+            
+            fingerprintSimulation = setInterval(() => {
+                scanProgress += 10;
+                
+                if (scanProgress <= 100) {
+                    fingerprintMessage.textContent = `Scanning fingerprint... ${scanProgress}%`;
+                }
+                
+                if (scanProgress >= 100) {
+                    clearInterval(fingerprintSimulation);
+                    fingerprintStatus.classList.add('active');
+                    fingerprintMessage.textContent = 'Fingerprint detected! Ready to verify.';
+                    
+                    // Generate random fingerprint data for simulation
+                    const fingerprintData = btoa(String.fromCharCode.apply(null, crypto.getRandomValues(new Uint8Array(64))));
+                    document.getElementById('fingerprintData').value = fingerprintData;
+                    
+                    verifyFingerprintBtn.disabled = false;
+                }
+            }, 300);
+        }, 1000);
+    }
+    
+    // Remember preferred biometric method
+    document.getElementById('rememberBiometric').addEventListener('change', function() {
+        if (this.checked) {
+            const activeTab = document.querySelector('.nav-link.active');
+            const biometricType = activeTab.id.replace('-tab', '');
+            
+            // Store preference (this would typically be sent to the server)
+            console.log(`Preferred biometric set to: ${biometricType}`);
+            
+            // In a real implementation, you would send this preference to the server
+            fetch('{{ url_for("profile.update_biometric_preference") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ preferred_biometric: biometricType }),
+            });
+        }
+    });
+    
+    // Clean up when leaving page
+    window.addEventListener('beforeunload', function() {
+        stopVideo();
+        if (fingerprintSimulation) {
+            clearInterval(fingerprintSimulation);
+        }
+    });
+</script>
+{% endblock %}
+

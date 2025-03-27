@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .header {
+            background-color: #198754;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #777;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table td, table th {
+            padding: 8px;
+            border: 1px solid #ddd;
+        }
+        table th {
+            background-color: #f2f2f2;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Session Verified</h2>
+        </div>
+        <div class="content">
+            <p>A session has been verified with the following details:</p>
+            
+            <table>
+                <tr>
+                    <th>Course</th>
+                    <td>{{ session.course.code }} - {{ session.course.name }}</td>
+                </tr>
+                <tr>
+                    <th>Lecturer</th>
+                    <td>{{ session.lecturer.username }}</td>
+                </tr>
+                <tr>
+                    <th>Classroom</th>
+                    <td>{{ session.classroom }}</td>
+                </tr>
+                <tr>
+                    <th>Start Time</th>
+                    <td>{{ session.start_time.strftime('%d-%m-%Y %H:%M:%S') }}</td>
+                </tr>
+                <tr>
+                    <th>End Time</th>
+                    <td>{{ session.end_time.strftime('%d-%m-%Y %H:%M:%S') }}</td>
+                </tr>
+                <tr>
+                    <th>Duration</th>
+                    <td>{{ session.duration_minutes()|int }} minutes</td>
+                </tr>
+                <tr>
+                    <th>Verified By</th>
+                    <td>{{ session.verifier.username }}</td>
+                </tr>
+            </table>
+            
+            <p>This session has been successfully verified and recorded.</p>
+            <p>This is an automated notification from the School Management System.</p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2023 School Management System. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+

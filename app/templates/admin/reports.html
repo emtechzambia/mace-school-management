@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - Mansa College of Education Staff Attendance Recording System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="d-flex">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="p-3 border-bottom">
+                <h4 class="mb-0">Mansa College of Education</h4>
+                <small>Admin Dashboard</small>
+            </div>
+            <div class="mt-3">
+                <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link">
+                    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                </a>
+                <a href="{{ url_for('admin.register_user') }}" class="sidebar-link">
+                    <i class="fas fa-user-plus me-2"></i> Register User
+                </a>
+                <a href="{{ url_for('admin.register_course') }}" class="sidebar-link">
+                    <i class="fas fa-book me-2"></i> Register Course
+                </a>
+                <a href="{{ url_for('admin.create_session') }}" class="sidebar-link">
+                    <i class="fas fa-calendar-plus me-2"></i> Create Session
+                </a>
+                <a href="{{ url_for('admin.reports') }}" class="sidebar-link active">
+                    <i class="fas fa-chart-bar me-2"></i> Reports
+                </a>
+                <a href="{{ url_for('admin.manage_reports') }}" class="sidebar-link">
+                    <i class="fas fa-file-alt me-2"></i> Manage Reports
+                </a>
+                <a href="{{ url_for('auth.logout') }}" class="sidebar-link mt-5">
+                    <i class="fas fa-sign-out-alt me-2"></i> Logout
+                </a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content flex-grow-1">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <h2 class="mb-4">Staff Attendance Reports</h2>
+            
+            <!-- Export Options -->
+            <div class="card card-dashboard mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-file-export me-2"></i>Export Options</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <a href="{{ url_for('admin.export_reports', format='csv') }}" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-file-csv me-2"></i>Export as CSV
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <a href="{{ url_for('admin.export_reports', format='excel') }}" class="btn btn-outline-success w-100">
+                                <i class="fas fa-file-excel me-2"></i>Export as Excel
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <a href="{{ url_for('admin.export_reports', format='json') }}" class="btn btn-outline-info w-100">
+                                <i class="fas fa-file-code me-2"></i>Export as JSON
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Reports -->
+            <div class="card card-dashboard mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Reports</h5>
+                </div>
+                <div class="card-body">
+                    {% if saved_reports %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Format</th>
+                                        <th>Created</th>
+                                        <th>Size</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for report in saved_reports[:5] %}
+                                        <tr>
+                                            <td>{{ report.title }}</td>
+                                            <td>
+                                                {% if report.format == 'excel' %}
+                                                    <span class="badge bg-success">Excel</span>
+                                                {% elif report.format == 'csv' %}
+                                                    <span class="badge bg-primary">CSV</span>
+                                                {% elif report.format == 'json' %}
+                                                    <span class="badge bg-info">JSON</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ report.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                            <td>{{ report.get_formatted_size() }}</td>
+                                            <td>
+                                                <a href="{{ url_for('admin.download_report', report_id=report.id) }}" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-download"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if saved_reports|length > 5 %}
+                            <div class="text-center mt-3">
+                                <a href="{{ url_for('admin.manage_reports') }}" class="btn btn-sm btn-outline-secondary">
+                                    View All Reports
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <p class="text-muted mb-0">No saved reports yet. Export a report to save it.</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Charts Row -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card card-dashboard">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Sessions by Staff</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="sessionsPieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card card-dashboard">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Hours Worked by Staff</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="hoursBarChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Detailed Report Table -->
+            <div class="card card-dashboard">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-table me-2"></i>Detailed Staff Attendance Report</h5>
+                </div>
+                <div class="card-body">
+                    {% if lecturer_stats %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Staff Name</th>
+                                        <th>Employee #</th>
+                                        <th>Department</th>
+                                        <th>Total Sessions</th>
+                                        <th>Total Hours</th>
+                                        <th>Average Session Duration</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for lecturer_id, stats in lecturer_stats.items() %}
+                                        {% set lecturer = User.query.get(lecturer_id) %}
+                                        <tr>
+                                            <td>{{ lecturer.get_full_name() }}</td>
+                                            <td>{{ lecturer.employee_number or 'N/A' }}</td>
+                                            <td>{{ lecturer.department or 'N/A' }}</td>
+                                            <td>{{ stats.total_sessions }}</td>
+                                            <td>{{ (stats.total_minutes / 60)|round(1) }} hours</td>
+                                            <td>{{ (stats.total_minutes / stats.total_sessions)|round }} minutes</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No verified sessions data available yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if lecturer_stats %}
+                // Data for charts
+                const lecturerNames = [{% for lecturer_id, stats in lecturer_stats.items() %}
+                    {% set lecturer = User.query.get(lecturer_id) %}
+                    '{{ lecturer.get_full_name() }}',
+                {% endfor %}];
+                const sessionCounts = [{% for lecturer_id, stats in lecturer_stats.items() %}{{ stats.total_sessions }},{% endfor %}];
+                const hoursCounts = [{% for lecturer_id, stats in lecturer_stats.items() %}{{ (stats.total_minutes / 60)|round(1) }},{% endfor %}];
+                
+                // Sessions Pie Chart
+                const sessionsCtx = document.getElementById('sessionsPieChart').getContext('2d');
+                new Chart(sessionsCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: lecturerNames,
+                        datasets: [{
+                            data: sessionCounts,
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.7)',
+                                'rgba(54, 162, 235, 0.7)',
+                                'rgba(255, 206, 86, 0.7)',
+                                'rgba(75, 192, 192, 0.7)',
+                                'rgba(153, 102, 255, 0.7)',
+                                'rgba(255, 159, 64, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(255, 99, 132, 1)',
+                                'rgba(54, 162, 235, 1)',
+                                'rgba(255, 206, 86, 1)',
+                                'rgba(75, 192, 192, 1)',
+                                'rgba(153, 102, 255, 1)',
+                                'rgba(255, 159, 64, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                            },
+                            title: {
+                                display: true,
+                                text: 'Total Sessions Conducted'
+                            }
+                        }
+                    }
+                });
+                
+                // Hours Bar Chart
+                const hoursCtx = document.getElementById('hoursBarChart').getContext('2d');
+                new Chart(hoursCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: lecturerNames,
+                        datasets: [{
+                            label: 'Hours Worked',
+                            data: hoursCounts,
+                            backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Hours'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            title: {
+                                display: true,
+                                text: 'Total Hours Worked'
+                            }
+                        }
+                    }
+                });
+            {% endif %}
+        });
+    </script>
+</body>
+</html>
+

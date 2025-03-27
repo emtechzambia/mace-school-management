@@ -1,0 +1,13 @@
+Session Started
+
+A session has been started with the following details:
+
+Course: {{ session.course.code }} - {{ session.course.name }}
+Lecturer: {{ session.lecturer.username }}
+Classroom: {{ session.classroom }}
+Start Time: {{ session.start_time.strftime('%d-%m-%Y %H:%M:%S') }}
+
+This is an automated notification from the School Management System.
+
+© 2023 School Management System. All rights reserved.
+

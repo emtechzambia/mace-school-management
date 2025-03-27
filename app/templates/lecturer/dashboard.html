@@ -1,0 +1,706 @@
+{% extends "base.html" %}
+
+{% block title %}Lecturer Dashboard - School Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-lg-row">
+   <!-- Sidebar -->
+   <div class="sidebar">
+       <div class="p-3 border-bottom">
+           <h4 class="mb-0">School Management</h4>
+           <small>Lecturer Dashboard</small>
+       </div>
+       <div class="mt-3">
+           <a href="#" class="sidebar-link active">
+               <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+           </a>
+           <a href="#upcoming" class="sidebar-link">
+               <i class="fas fa-calendar me-2"></i> Upcoming Sessions
+           </a>
+           <a href="#active" class="sidebar-link">
+               <i class="fas fa-clock me-2"></i> Active Sessions
+           </a>
+           <a href="#completed" class="sidebar-link">
+               <i class="fas fa-check-circle me-2"></i> Completed Sessions
+           </a>
+           <a href="{{ url_for('lecturer.attendance_history') }}" class="sidebar-link">
+               <i class="fas fa-history me-2"></i> Attendance History
+           </a>
+           <a href="{{ url_for('biometric.enroll') }}" class="sidebar-link">
+               <i class="fas fa-fingerprint me-2"></i> Fingerprint Enrollment
+           </a>
+           <a href="{{ url_for('auth.logout') }}" class="sidebar-link mt-5">
+               <i class="fas fa-sign-out-alt me-2"></i> Logout
+           </a>
+       </div>
+   </div>
+
+   <!-- Main Content -->
+   <div class="main-content">
+       {% with messages = get_flashed_messages() %}
+           {% if messages %}
+               {% for message in messages %}
+                   <div class="alert alert-success alert-dismissible fade show" role="alert">
+                       {{ message }}
+                       <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                   </div>
+               {% endfor %}
+           {% endif %}
+       {% endwith %}
+
+       <h2 class="mb-4">Lecturer Dashboard</h2>
+       
+       <!-- Attendance Card -->
+       <div class="card card-dashboard mb-4">
+           <div class="card-header bg-dark text-white">
+               <h5 class="mb-0"><i class="fas fa-user-clock me-2"></i>Today's Attendance</h5>
+           </div>
+           <div class="card-body">
+               <div class="row">
+                   <div class="col-md-6">
+                       <div class="d-flex align-items-center mb-3">
+                           <div class="me-3">
+                               <i class="fas fa-calendar-day fa-2x text-primary"></i>
+                           </div>
+                           <div>
+                               <h6 class="mb-0">Today's Date</h6>
+                               <p class="mb-0 text-muted">{{ now.strftime('%A, %d %B %Y') }}</p>
+                           </div>
+                       </div>
+                       
+                       <div class="d-flex align-items-center mb-3">
+                           <div class="me-3">
+                               <i class="fas fa-clock fa-2x text-info"></i>
+                           </div>
+                           <div>
+                               <h6 class="mb-0">Current Time</h6>
+                               <p class="mb-0 text-muted" id="currentTime">{{ now.strftime('%H:%M:%S') }}</p>
+                           </div>
+                       </div>
+                       
+                       {% if today_attendance %}
+                           <div class="d-flex align-items-center">
+                               <div class="me-3">
+                                   <i class="fas fa-user-check fa-2x text-success"></i>
+                               </div>
+                               <div>
+                                   <h6 class="mb-0">Status</h6>
+                                   <p class="mb-0">
+                                       {% if today_attendance.status == 'present' %}
+                                           <span class="badge bg-success">Present</span>
+                                       {% elif today_attendance.status == 'late' %}
+                                           <span class="badge bg-warning text-dark">Late</span>
+                                       {% elif today_attendance.status == 'absent' %}
+                                           <span class="badge bg-danger">Absent</span>
+                                       {% elif today_attendance.status == 'half-day' %}
+                                           <span class="badge bg-info">Half Day</span>
+                                       {% endif %}
+                                   </p>
+                               </div>
+                           </div>
+                       {% endif %}
+                   </div>
+                   
+                   <div class="col-md-6">
+                       {% if today_attendance and today_attendance.clock_in %}
+                           <div class="d-flex align-items-center mb-3">
+                               <div class="me-3">
+                                   <i class="fas fa-sign-in-alt fa-2x text-success"></i>
+                               </div>
+                               <div>
+                                   <h6 class="mb-0">Clock In</h6>
+                                   <p class="mb-0 text-muted">{{ today_attendance.clock_in.strftime('%H:%M:%S') }}</p>
+                                   {% if today_attendance.clock_in_verified %}
+                                       <span class="badge bg-success">Biometrically Verified</span>
+                                   {% endif %}
+                               </div>
+                           </div>
+                           
+                           {% if today_attendance.clock_out %}
+                               <div class="d-flex align-items-center mb-3">
+                                   <div class="me-3">
+                                       <i class="fas fa-sign-out-alt fa-2x text-danger"></i>
+                                   </div>
+                                   <div>
+                                       <h6 class="mb-0">Clock Out</h6>
+                                       <p class="mb-0 text-muted">{{ today_attendance.clock_out.strftime('%H:%M:%S') }}</p>
+                                       {% if today_attendance.clock_out_verified %}
+                                           <span class="badge bg-success">Biometrically Verified</span>
+                                       {% endif %}
+                                   </div>
+                               </div>
+                               
+                               <div class="d-flex align-items-center">
+                                   <div class="me-3">
+                                       <i class="fas fa-hourglass-half fa-2x text-primary"></i>
+                                   </div>
+                                   <div>
+                                       <h6 class="mb-0">Work Duration</h6>
+                                       <p class="mb-0 text-muted">{{ today_attendance.get_work_duration()|round(2) }} hours</p>
+                                   </div>
+                               </div>
+                           {% else %}
+                               <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#clockOutModal">
+                                   <i class="fas fa-sign-out-alt me-2"></i>Clock Out
+                               </button>
+                               
+                               <!-- Clock Out Modal -->
+                               <div class="modal fade" id="clockOutModal" tabindex="-1" aria-hidden="true">
+                                   <div class="modal-dialog modal-dialog-centered">
+                                       <div class="modal-content">
+                                           <div class="modal-header bg-danger text-white">
+                                               <h5 class="modal-title">Clock Out</h5>
+                                               <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                           </div>
+                                           <div class="modal-body">
+                                               <p>Please verify your identity with your fingerprint to clock out.</p>
+                                               
+                                               <div class="fingerprint-container text-center">
+                                                   <div class="fingerprint-reader" id="fingerprintReader">
+                                                       <i class="fas fa-fingerprint fingerprint-icon"></i>
+                                                   </div>
+                                                   <div id="fingerprintStatus">Place your finger on the scanner</div>
+                                               </div>
+                                           </div>
+                                           <div class="modal-footer">
+                                               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                               <form action="{{ url_for('lecturer.clock_out') }}" method="POST" id="clockOutForm">
+                                                   <input type="hidden" name="fingerprint_verified" id="fingerprintVerified" value="false">
+                                                   <button type="submit" class="btn btn-danger" id="clockOutBtn" disabled>
+                                                       <i class="fas fa-sign-out-alt me-2"></i>Confirm Clock Out
+                                                   </button>
+                                               </form>
+                                           </div>
+                                       </div>
+                                   </div>
+                               </div>
+                           {% endif %}
+                       {% else %}
+                           <button type="button" class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#clockInModal">
+                               <i class="fas fa-sign-in-alt me-2"></i>Clock In
+                           </button>
+                           
+                           <!-- Clock In Modal -->
+                           <div class="modal fade" id="clockInModal" tabindex="-1" aria-hidden="true">
+                               <div class="modal-dialog modal-dialog-centered">
+                                   <div class="modal-content">
+                                       <div class="modal-header bg-success text-white">
+                                           <h5 class="modal-title">Clock In</h5>
+                                           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                       </div>
+                                       <div class="modal-body">
+                                           <div class="mb-3">
+                                               <label for="location" class="form-label">Location</label>
+                                               <select class="form-select" id="location" name="location">
+                                                   <option value="On Campus">On Campus</option>
+                                                   <option value="Remote">Remote</option>
+                                                   <option value="Field Work">Field Work</option>
+                                               </select>
+                                           </div>
+                                           
+                                           <p>Please verify your identity with your fingerprint to clock in.</p>
+                                           
+                                           <div class="fingerprint-container text-center">
+                                               <div class="fingerprint-reader" id="fingerprintReaderIn">
+                                                   <i class="fas fa-fingerprint fingerprint-icon"></i>
+                                               </div>
+                                               <div id="fingerprintStatusIn">Place your finger on the scanner</div>
+                                           </div>
+                                           
+                                           {% if not current_user.has_enrolled_fingerprints() %}
+                                               <div class="alert alert-warning mt-3">
+                                                   <i class="fas fa-exclamation-triangle me-2"></i>
+                                                   You haven't enrolled your fingerprints yet. Please <a href="{{ url_for('biometric.enroll') }}">enroll your fingerprints</a> to use biometric verification.
+                                               </div>
+                                           {% endif %}
+                                       </div>
+                                       <div class="modal-footer">
+                                           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                           <form action="{{ url_for('lecturer.clock_in') }}" method="POST" id="clockInForm">
+                                               <input type="hidden" name="location" id="locationInput" value="On Campus">
+                                               <input type="hidden" name="fingerprint_verified" id="fingerprintVerifiedIn" value="false">
+                                               <button type="submit" class="btn btn-success" id="clockInBtn" disabled>
+                                                   <i class="fas fa-sign-in-alt me-2"></i>Confirm Clock In
+                                               </button>
+                                           </form>
+                                       </div>
+                                   </div>
+                               </div>
+                           </div>
+                           
+                           <div class="alert alert-info">
+                               <i class="fas fa-info-circle me-2"></i>
+                               You haven't clocked in yet today. Please clock in to record your attendance.
+                           </div>
+                       {% endif %}
+                   </div>
+               </div>
+           </div>
+       </div>
+       
+       <!-- Stats Cards -->
+       <div class="row g-3 mb-4">
+           <div class="col-6 col-md-3">
+               <div class="card card-dashboard bg-primary text-white h-100">
+                   <div class="card-body">
+                       <div class="d-flex justify-content-between align-items-center">
+                           <div>
+                               <h6 class="card-title">Active Sessions</h6>
+                               <h2 class="mb-0">{{ active_sessions|length }}</h2>
+                           </div>
+                           <i class="fas fa-clock fa-2x opacity-50"></i>
+                       </div>
+                   </div>
+               </div>
+           </div>
+           <div class="col-6 col-md-3">
+               <div class="card card-dashboard bg-warning text-dark h-100">
+                   <div class="card-body">
+                       <div class="d-flex justify-content-between align-items-center">
+                           <div>
+                               <h6 class="card-title">Upcoming Sessions</h6>
+                               <h2 class="mb-0">{{ upcoming_sessions|length }}</h2>
+                           </div>
+                           <i class="fas fa-calendar fa-2x opacity-50"></i>
+                       </div>
+                   </div>
+               </div>
+           </div>
+           <div class="col-12 col-md-6">
+               <div class="card card-dashboard bg-success text-white h-100">
+                   <div class="card-body">
+                       <div class="d-flex justify-content-between align-items-center">
+                           <div>
+                               <h6 class="card-title">Completed Sessions</h6>
+                               <h2 class="mb-0">{{ completed_sessions|length }}</h2>
+                           </div>
+                           <i class="fas fa-check-circle fa-2x opacity-50"></i>
+                       </div>
+                   </div>
+               </div>
+           </div>
+       </div>
+       
+       <!-- Active Sessions -->
+       <div class="card card-dashboard mb-4" id="active">
+           <div class="card-header bg-primary text-white">
+               <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Active Sessions</h5>
+           </div>
+           <div class="card-body">
+               {% if active_sessions %}
+                   <div class="table-responsive">
+                       <table class="table table-hover table-responsive-card">
+                           <thead>
+                               <tr>
+                                   <th>Course</th>
+                                   <th>Classroom</th>
+                                   <th>Start Time</th>
+                                   <th>Duration</th>
+                                   <th>Action</th>
+                               </tr>
+                           </thead>
+                           <tbody>
+                               {% for session in active_sessions %}
+                                   <tr>
+                                       <td data-label="Course">{{ session.course.code }} - {{ session.course.name }}</td>
+                                       <td data-label="Classroom">{{ session.classroom }}</td>
+                                       <td data-label="Start Time">{{ session.start_time.strftime('%H:%M:%S') }}</td>
+                                       <td data-label="Duration">
+                                           {% set duration = ((now - session.start_time).total_seconds() / 60)|int %}
+                                           {{ duration }} minutes
+                                       </td>
+                                       <td data-label="Action">
+                                           <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#endSessionModal{{ session.id }}">
+                                               End Session
+                                           </button>
+                                           
+                                           <!-- End Session Modal -->
+                                           <div class="modal fade" id="endSessionModal{{ session.id }}" tabindex="-1" aria-hidden="true">
+                                               <div class="modal-dialog modal-dialog-centered">
+                                                   <div class="modal-content">
+                                                       <div class="modal-header bg-danger text-white">
+                                                           <h5 class="modal-title">End Session</h5>
+                                                           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                       </div>
+                                                       <form action="{{ url_for('lecturer.end_session', session_id=session.session_id) }}" method="POST">
+                                                           <div class="modal-body">
+                                                               <p>You are about to end the session for <strong>{{ session.course.code }} - {{ session.course.name }}</strong>.</p>
+                                                               <p>Please sign below to confirm:</p>
+                                                               
+                                                               <div class="signature-pad" id="signature{{ session.id }}"></div>
+                                                               <input type="hidden" name="signature" id="signatureInput{{ session.id }}">
+                                                               
+                                                               <div class="mt-2 text-end">
+                                                                   <button type="button" class="btn btn-sm btn-secondary" id="clearSignature{{ session.id }}">
+                                                                       Clear Signature
+                                                                   </button>
+                                                               </div>
+                                                           </div>
+                                                           <div class="modal-footer">
+                                                               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                               <button type="submit" class="btn btn-danger" id="submitEnd{{ session.id }}">End Session</button>
+                                                           </div>
+                                                       </form>
+                                                   </div>
+                                               </div>
+                                           </div>
+                                       </td>
+                                   </tr>
+                               {% endfor %}
+                           </tbody>
+                       </table>
+                   </div>
+               {% else %}
+                   <p class="text-muted mb-0">No active sessions at the moment.</p>
+               {% endif %}
+           </div>
+       </div>
+       
+       <!-- Upcoming Sessions -->
+       <div class="card card-dashboard mb-4" id="upcoming">
+           <div class="card-header bg-warning text-dark">
+               <h5 class="mb-0"><i class="fas fa-calendar me-2"></i>Upcoming Sessions</h5>
+           </div>
+           <div class="card-body">
+               {% if upcoming_sessions %}
+                   <div class="table-responsive">
+                       <table class="table table-hover table-responsive-card">
+                           <thead>
+                               <tr>
+                                   <th>Course</th>
+                                   <th>Classroom</th>
+                                   <th>Status</th>
+                                   <th>Action</th>
+                               </tr>
+                           </thead>
+                           <tbody>
+                               {% for session in upcoming_sessions %}
+                                   <tr>
+                                       <td data-label="Course">{{ session.course.code }} - {{ session.course.name }}</td>
+                                       <td data-label="Classroom">{{ session.classroom }}</td>
+                                       <td data-label="Status">
+                                           <span class="badge bg-warning text-dark status-badge">
+                                               <i class="fas fa-hourglass-half me-1"></i> Pending
+                                           </span>
+                                       </td>
+                                       <td data-label="Action">
+                                           <form action="{{ url_for('lecturer.start_session', session_id=session.session_id) }}" method="POST">
+                                               <button type="submit" class="btn btn-sm btn-success">
+                                                   Start Session
+                                               </button>
+                                           </form>
+                                       </td>
+                                   </tr>
+                               {% endfor %}
+                           </tbody>
+                       </table>
+                   </div>
+               {% else %}
+                   <p class="text-muted mb-0">No upcoming sessions at the moment.</p>
+               {% endif %}
+           </div>
+       </div>
+       
+       <!-- Completed Sessions -->
+       <div class="card card-dashboard" id="completed">
+           <div class="card-header bg-success text-white">
+               <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>Completed Sessions</h5>
+           </div>
+           <div class="card-body">
+               {% if completed_sessions %}
+                   <div class="table-responsive">
+                       <table class="table table-hover table-responsive-card">
+                           <thead>
+                               <tr>
+                                   <th>Course</th>
+                                   <th>Classroom</th>
+                                   <th>Date</th>
+                                   <th>Duration</th>
+                                   <th>Status</th>
+                               </tr>
+                           </thead>
+                           <tbody>
+                               {% for session in completed_sessions %}
+                                   <tr>
+                                       <td data-label="Course">{{ session.course.code }} - {{ session.course.name }}</td>
+                                       <td data-label="Classroom">{{ session.classroom }}</td>
+                                       <td data-label="Date">{{ session.start_time.strftime('%d-%m-%Y') }}</td>
+                                       <td data-label="Duration">{{ session.duration_minutes()|int }} minutes</td>
+                                       <td data-label="Status">
+                                           {% if session.status == 'verified' %}
+                                               <span class="badge bg-success status-badge">
+                                                   <i class="fas fa-check-circle me-1"></i> Verified
+                                               </span>
+                                           {% else %}
+                                               <span class="badge bg-info status-badge">
+                                                   <i class="fas fa-clock me-1"></i> Completed
+                                               </span>
+                                           {% endif %}
+                                       </td>
+                                   </tr>
+                               {% endfor %}
+                           </tbody>
+                       </table>
+                   </div>
+               {% else %}
+                   <p class="text-muted mb-0">No completed sessions yet.</p>
+               {% endif %}
+           </div>
+       </div>
+   </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jSignature/2.1.3/jSignature.min.js"></script>
+<script>
+   $(document).ready(function() {
+       // Initialize signature pads for all active sessions
+       {% for session in active_sessions %}
+           initializeSignaturePad("{{ session.id }}");
+       {% endfor %}
+       
+       // Function to initialize signature pad with responsive behavior
+       function initializeSignaturePad(sessionId) {
+           const signatureId = `#signature${sessionId}`;
+           const clearBtnId = `#clearSignature${sessionId}`;
+           const submitBtnId = `#submitEnd${sessionId}`;
+           const inputId = `#signatureInput${sessionId}`;
+           const modalId = `#endSessionModal${sessionId}`;
+           
+           // Initialize with responsive width and height
+           const $signatureDiv = $(signatureId);
+           const parentWidth = $signatureDiv.parent().width();
+           
+           // Set initial size based on container
+           $signatureDiv.jSignature({
+               'UndoButton': false,
+               'lineWidth': 2,
+               'width': parentWidth,
+               'height': Math.max(200, parentWidth * 0.6),
+               'cssclass': 'signature-pad-responsive',
+               'backgroundColor': 'rgba(255, 255, 255, 0)'
+           });
+           
+           // Add custom styling for better visibility
+           $signatureDiv.find('canvas').css({
+               'border': '1px solid #dee2e6',
+               'border-radius': '5px',
+               'background-color': '#fff'
+           });
+           
+           // Handle modal shown event to reinitialize signature pad
+           $(modalId).on('shown.bs.modal', function() {
+               // Reset and reinitialize to handle modal animation
+               $(signatureId).jSignature('reset');
+               
+               // Adjust size after modal is fully visible
+               const newWidth = $(signatureId).parent().width();
+               $(signatureId).jSignature('reset');
+               $(signatureId).jSignature({
+                   'UndoButton': false,
+                   'lineWidth': 2,
+                   'width': newWidth,
+                   'height': Math.max(200, newWidth * 0.6),
+                   'cssclass': 'signature-pad-responsive',
+                   'backgroundColor': 'rgba(255, 255, 255, 0)'
+               });
+               
+               // Add custom styling again
+               $(signatureId).find('canvas').css({
+                   'border': '1px solid #dee2e6',
+                   'border-radius': '5px',
+                   'background-color': '#fff'
+               });
+           });
+           
+           // Clear signature
+           $(clearBtnId).on('click', function() {
+               $(signatureId).jSignature('reset');
+               $(submitBtnId).prop('disabled', true);
+               return false;
+           });
+           
+           // Enable submit button when signature is added
+           $(signatureId).on('change', function() {
+               const data = $(signatureId).jSignature('getData');
+               const isEmpty = $(signatureId).jSignature('getData', 'native').length === 0;
+               
+               if (!isEmpty) {
+                   $(submitBtnId).prop('disabled', false);
+               } else {
+                   $(submitBtnId).prop('disabled', true);
+               }
+           });
+           
+           // Submit form
+           $(submitBtnId).on('click', function() {
+               if ($(signatureId).jSignature('getData', 'native').length === 0) {
+                   // Show error message
+                   const alertDiv = $('<div class="alert alert-danger mt-2" role="alert">')
+                       .text('Please sign before submitting')
+                       .appendTo($(signatureId).parent());
+                   
+                   // Auto dismiss after 3 seconds
+                   setTimeout(function() {
+                       alertDiv.fadeOut(function() {
+                           $(this).remove();
+                       });
+                   }, 3000);
+                   
+                   return false;
+               }
+               
+               // Get signature data and set to hidden input
+               const data = $(signatureId).jSignature('getData', 'image');
+               $(inputId).val(data);
+           });
+           
+           // Initially disable submit button until signature is provided
+           $(submitBtnId).prop('disabled', true);
+           
+           // Handle window resize
+           $(window).on('resize', function() {
+               // Only resize if modal is visible
+               if ($(modalId).is(':visible')) {
+                   const newWidth = $(signatureId).parent().width();
+                   $(signatureId).jSignature('reset');
+                   $(signatureId).jSignature({
+                       'UndoButton': false,
+                       'lineWidth': 2,
+                       'width': newWidth,
+                       'height': Math.max(200, newWidth * 0.6),
+                       'cssclass': 'signature-pad-responsive',
+                       'backgroundColor': 'rgba(255, 255, 255, 0)'
+                   });
+                   
+                   // Add custom styling again
+                   $(signatureId).find('canvas').css({
+                       'border': '1px solid #dee2e6',
+                       'border-radius': '5px',
+                       'background-color': '#fff'
+                   });
+               }
+           });
+       }
+       
+       // Update current time every second
+       function updateCurrentTime() {
+           const now = new Date();
+           const timeString = now.toLocaleTimeString();
+           $('#currentTime').text(timeString);
+       }
+       
+       // Update time initially and then every second
+       updateCurrentTime();
+       setInterval(updateCurrentTime, 1000);
+       
+       // Handle fingerprint verification for clock in/out
+       function initializeFingerprintVerification() {
+           // Clock In
+           $('#clockInModal').on('shown.bs.modal', function() {
+               simulateFingerprintScan('In');
+           });
+           
+           // Clock Out
+           $('#clockOutModal').on('shown.bs.modal', function() {
+               simulateFingerprintScan('Out');
+           });
+           
+           // Update location input when select changes
+           $('#location').on('change', function() {
+               $('#locationInput').val($(this).val());
+           });
+           
+           function simulateFingerprintScan(type) {
+               const statusEl = $(`#fingerprintStatus${type}`);
+               const readerEl = $(`#fingerprintReader${type}`);
+               const verifiedInput = $(`#fingerprintVerified${type}`);
+               const submitBtn = $(`#clock${type}Btn`);
+               
+               statusEl.text('Place your finger on the scanner');
+               readerEl.addClass('scanning');
+               submitBtn.prop('disabled', true);
+               
+               // Simulate scanning process
+               setTimeout(() => {
+                   statusEl.text('Scanning...');
+                   
+                   setTimeout(() => {
+                       // Check if user has enrolled fingerprints
+                       {% if current_user.has_enrolled_fingerprints() %}
+                           // Verify fingerprint with server
+                           $.ajax({
+                               url: '{{ url_for("biometric.verify") }}',
+                               method: 'POST',
+                               data: {
+                                   fingerprint_data: 'simulated_data',
+                                   action: `clock_${type.toLowerCase()}`
+                               },
+                               success: function(response) {
+                                   if (response.success) {
+                                       statusEl.html('<span class="text-success">Fingerprint verified!</span>');
+                                       verifiedInput.val('true');
+                                       submitBtn.prop('disabled', false);
+                                   } else {
+                                       statusEl.html('<span class="text-danger">Verification failed. Please try again.</span>');
+                                   }
+                                   readerEl.removeClass('scanning');
+                               },
+                               error: function() {
+                                   statusEl.html('<span class="text-danger">Error verifying fingerprint. Please try again.</span>');
+                                   readerEl.removeClass('scanning');
+                               }
+                           });
+                       {% else %}
+                           // No enrolled fingerprints
+                           statusEl.html('<span class="text-warning">No enrolled fingerprints found. Please enroll first.</span>');
+                           readerEl.removeClass('scanning');
+                       {% endif %}
+                   }, 2000);
+               }, 1000);
+           }
+       }
+       
+       // Initialize fingerprint verification
+       initializeFingerprintVerification();
+       
+       // Smooth scroll for sidebar links
+       document.querySelectorAll('.sidebar-link[href^="#"]').forEach(anchor => {
+           anchor.addEventListener('click', function (e) {
+               e.preventDefault();
+               
+               const targetId = this.getAttribute('href');
+               const targetElement = document.querySelector(targetId);
+               
+               if (targetElement) {
+                   // Close sidebar on mobile if open
+                   if (window.innerWidth < 992 && document.body.classList.contains('sidebar-open')) {
+                       document.body.classList.remove('sidebar-open');
+                       const toggle = document.getElementById('sidebarToggle');
+                       if (toggle) {
+                           const icon = toggle.querySelector('i');
+                           icon.classList.remove('fa-times');
+                           icon.classList.add('fa-bars');
+                       }
+                   }
+                   
+                   // Scroll to target with offset for fixed header
+                   const yOffset = -20; 
+                   const y = targetElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                   
+                   window.scrollTo({top: y, behavior: 'smooth'});
+                   
+                   // Update active state
+                   document.querySelectorAll('.sidebar-link').forEach(link => {
+                       link.classList.remove('active');
+                   });
+                   this.classList.add('active');
+               }
+           });
+       });
+   });
+</script>
+{% endblock %}
+

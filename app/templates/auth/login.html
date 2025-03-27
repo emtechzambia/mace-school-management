@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}Login - Mansa College of Education Staff Attendance Recording System{% endblock %}
+{% block extra_css %}
+<style>
+    .login-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    .login-container {
+        max-width: 450px;
+        width: 100%;
+        padding: 20px;
+    }
+    .login-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    .login-header {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+        color: white;
+        padding: 30px 20px;
+        text-align: center;
+    }
+    .login-logo {
+        width: 80px;
+        height: 80px;
+        background-color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 15px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+    .login-logo i {
+        font-size: 40px;
+        color: #0d6efd;
+    }
+    .login-form {
+        padding: 30px;
+    }
+    .form-floating {
+        margin-bottom: 20px;
+    }
+    .form-floating label {
+        color: #6c757d;
+    }
+    .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    .btn-login {
+        padding: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s;
+    }
+    .btn-login:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(13, 110, 253, 0.3);
+    }
+    .login-footer {
+        text-align: center;
+        margin-top: 20px;
+    }
+    .login-footer a {
+        color: #0d6efd;
+        text-decoration: none;
+        transition: all 0.3s;
+    }
+    .login-footer a:hover {
+        color: #0a58ca;
+        text-decoration: underline;
+    }
+    .alert {
+        border-radius: 10px;
+        border: none;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .alert-danger {
+        background-color: #f8d7da;
+        color: #842029;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-page">
+    <div class="login-container">
+        <div class="card login-card">
+            <div class="login-header">
+                <div class="login-logo">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <h3 class="mb-1">Welcome Back</h3>
+                <p class="mb-0">Sign in to continue to Mansa College</p>
+            </div>
+            <div class="login-form">
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-circle me-2"></i>{{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                
+                <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm" novalidate>
+                    <div class="form-floating">
+                        <input type="text" class="form-control" id="username" name="username" placeholder="Username" required>
+                        <label for="username"><i class="fas fa-user me-2"></i>Username</label>
+                        <div class="invalid-feedback">Please enter your username</div>
+                    </div>
+                    
+                    <div class="form-floating">
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+                        <label for="password"><i class="fas fa-lock me-2"></i>Password</label>
+                        <div class="invalid-feedback">Please enter your password</div>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="rememberMe" name="remember_me">
+                        <label class="form-check-label" for="rememberMe">
+                            Remember me
+                        </label>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-login">
+                            <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="login-footer">
+            <a href="{{ url_for('auth.index') }}">
+                <i class="fas fa-arrow-left me-1"></i> Back to Home
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Form validation
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('loginForm');
+        
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            form.classList.add('was-validated');
+        });
+        
+        // Focus on username field when page loads
+        document.getElementById('username').focus();
+        
+        // Toggle password visibility
+        const passwordField = document.getElementById('password');
+        const togglePassword = document.createElement('button');
+        togglePassword.type = 'button';
+        togglePassword.className = 'btn btn-outline-secondary position-absolute end-0 top-50 translate-middle-y me-3';
+        togglePassword.innerHTML = '<i class="fas fa-eye"></i>';
+        togglePassword.style.zIndex = '5';
+        togglePassword.addEventListener('click', function() {
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                this.innerHTML = '<i class="fas fa-eye-slash"></i>';
+            } else {
+                passwordField.type = 'password';
+                this.innerHTML = '<i class="fas fa-eye"></i>';
+            }
+        });
+        
+        // Add toggle button to password field container
+        const passwordContainer = passwordField.parentElement;
+        passwordContainer.style.position = 'relative';
+        passwordContainer.appendChild(togglePassword);
+    });
+</script>
+{% endblock %}
+

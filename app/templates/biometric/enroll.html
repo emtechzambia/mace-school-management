@@ -1,0 +1,508 @@
+{% extends "base.html" %}
+
+{% block title %}Enroll Fingerprint - School Management System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .fingerprint-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+    
+    .fingerprint-reader {
+        width: 200px;
+        height: 200px;
+        background-color: #000;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .fingerprint-reader::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 5px;
+        background: linear-gradient(90deg, transparent, #0d6efd, transparent);
+        top: 50%;
+        left: 0;
+        transform: translateY(-50%);
+        animation: scan 2s linear infinite;
+        opacity: 0;
+    }
+    
+    .fingerprint-reader.scanning::after {
+        opacity: 1;
+    }
+    
+    @keyframes scan {
+        0% {
+            top: 0;
+        }
+        100% {
+            top: 100%;
+        }
+    }
+    
+    .fingerprint-icon {
+        font-size: 80px;
+        color: #0d6efd;
+    }
+    
+    .finger-selector {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .finger-option {
+        border: 2px solid #dee2e6;
+        border-radius: 10px;
+        padding: 1rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        width: 150px;
+    }
+    
+    .finger-option:hover {
+        border-color: #0d6efd;
+        transform: translateY(-5px);
+    }
+    
+    .finger-option.active {
+        border-color: #0d6efd;
+        background-color: rgba(13, 110, 253, 0.1);
+    }
+    
+    .finger-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        color: #0d6efd;
+    }
+    
+    .status-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 1rem;
+    }
+    
+    .status-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+    }
+    
+    .status-dot.connected {
+        background-color: #198754;
+    }
+    
+    .status-dot.disconnected {
+        background-color: #dc3545;
+    }
+    
+    .enrollment-steps {
+        margin-bottom: 2rem;
+    }
+    
+    .step {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding: 1rem;
+        border-radius: 10px;
+        background-color: #f8f9fa;
+    }
+    
+    .step-number {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background-color: #0d6efd;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-weight: bold;
+    }
+    
+    .step-content {
+        flex: 1;
+    }
+    
+    .step-title {
+        font-weight: bold;
+        margin-bottom: 0.25rem;
+    }
+    
+    .capture-count {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin: 1rem 0;
+    }
+    
+    .quality-meter {
+        width: 100%;
+        height: 10px;
+        background-color: #e9ecef;
+        border-radius: 5px;
+        margin-top: 0.5rem;
+        overflow: hidden;
+    }
+    
+    .quality-bar {
+        height: 100%;
+        background-color: #0d6efd;
+        width: 0%;
+        transition: width 0.3s ease;
+    }
+    
+    .quality-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-lg-row">
+   <!-- Sidebar -->
+   <div class="sidebar">
+       <div class="p-3 border-bottom">
+           <h4 class="mb-0">School Management</h4>
+           <small>{{ current_user.role.capitalize() }} Dashboard</small>
+       </div>
+       <div class="mt-3">
+           {% if current_user.role == 'admin' %}
+               <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link">
+                   <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+               </a>
+           {% elif current_user.role == 'lecturer' %}
+               <a href="{{ url_for('lecturer.dashboard') }}" class="sidebar-link">
+                   <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+               </a>
+           {% elif current_user.role == 'class_rep' %}
+               <a href="{{ url_for('class_rep.dashboard') }}" class="sidebar-link">
+                   <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+               </a>
+           {% endif %}
+           
+           <a href="{{ url_for('calendar.index') }}" class="sidebar-link">
+               <i class="fas fa-calendar-alt me-2"></i> Calendar
+           </a>
+           
+           <a href="{{ url_for('profile.index') }}" class="sidebar-link">
+               <i class="fas fa-user-cog me-2"></i> Profile
+           </a>
+           
+           <a href="{{ url_for('biometric.enroll') }}" class="sidebar-link active">
+               <i class="fas fa-fingerprint me-2"></i> Fingerprint Enrollment
+           </a>
+           
+           <a href="{{ url_for('biometric.test_device') }}" class="sidebar-link">
+               <i class="fas fa-tools me-2"></i> Test Device
+           </a>
+           
+           <a href="{{ url_for('auth.logout') }}" class="sidebar-link mt-5">
+               <i class="fas fa-sign-out-alt me-2"></i> Logout
+           </a>
+       </div>
+   </div>
+
+   <!-- Main Content -->
+   <div class="main-content">
+       {% with messages = get_flashed_messages() %}
+           {% if messages %}
+               {% for message in messages %}
+                   <div class="alert alert-success alert-dismissible fade show" role="alert">
+                       {{ message }}
+                       <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                   </div>
+               {% endfor %}
+           {% endif %}
+       {% endwith %}
+
+       <h2 class="mb-4">Fingerprint Enrollment</h2>
+       
+       <div class="card card-dashboard mb-4">
+           <div class="card-header bg-primary text-white">
+               <h5 class="mb-0"><i class="fas fa-fingerprint me-2"></i>Enroll Your Fingerprint</h5>
+           </div>
+           <div class="card-body">
+               <div class="status-indicator mb-4">
+                   <div class="status-dot" id="deviceStatus"></div>
+                   <span id="deviceStatusText">Checking device status...</span>
+               </div>
+               
+               <div class="enrollment-steps">
+                   <div class="step">
+                       <div class="step-number">1</div>
+                       <div class="step-content">
+                           <div class="step-title">Select a finger to enroll</div>
+                           <p>Choose which finger you want to use for biometric verification.</p>
+                       </div>
+                   </div>
+                   <div class="step">
+                       <div class="step-number">2</div>
+                       <div class="step-content">
+                           <div class="step-title">Place your finger on the scanner</div>
+                           <p>Place your finger on the scanner and hold it until the scan is complete.</p>
+                       </div>
+                   </div>
+                   <div class="step">
+                       <div class="step-number">3</div>
+                       <div class="step-content">
+                           <div class="step-title">Repeat the scan</div>
+                           <p>You'll need to scan your finger multiple times to create a reliable template.</p>
+                       </div>
+                   </div>
+               </div>
+               
+               <div class="finger-selector">
+                   <div class="finger-option active" data-finger="right_index">
+                       <div class="finger-icon">
+                           <i class="fas fa-hand-point-up"></i>
+                       </div>
+                       <div>Right Index</div>
+                   </div>
+                   <div class="finger-option" data-finger="right_thumb">
+                       <div class="finger-icon">
+                           <i class="fas fa-thumbs-up"></i>
+                       </div>
+                       <div>Right Thumb</div>
+                   </div>
+                   <div class="finger-option" data-finger="left_index">
+                       <div class="finger-icon">
+                           <i class="fas fa-hand-point-up fa-flip-horizontal"></i>
+                       </div>
+                       <div>Left Index</div>
+                   </div>
+                   <div class="finger-option" data-finger="left_thumb">
+                       <div class="finger-icon">
+                           <i class="fas fa-thumbs-up fa-flip-horizontal"></i>
+                       </div>
+                       <div>Left Thumb</div>
+                   </div>
+               </div>
+               
+               <div class="fingerprint-container">
+                   <div class="fingerprint-reader" id="fingerprintReader">
+                       <i class="fas fa-fingerprint fingerprint-icon"></i>
+                   </div>
+                   <div class="text-center">
+                       <div id="enrollmentStatus">Ready to scan</div>
+                       <div class="capture-count" id="captureCount">0/4</div>
+                       <div class="quality-meter">
+                           <div class="quality-bar" id="qualityBar"></div>
+                       </div>
+                       <div class="quality-text" id="qualityText">Quality: 0%</div>
+                   </div>
+               </div>
+               
+               <form id="enrollmentForm" action="{{ url_for('biometric.enroll') }}" method="POST">
+                   <input type="hidden" name="fingerprint_data" id="fingerprintData">
+                   <input type="hidden" name="finger_position" id="fingerPosition" value="right_index">
+                   
+                   <div class="d-grid gap-2">
+                       <button type="button" id="startScanBtn" class="btn btn-primary">
+                           <i class="fas fa-fingerprint me-2"></i>Start Scanning
+                       </button>
+                       <button type="submit" id="saveBtn" class="btn btn-success" disabled>
+                           <i class="fas fa-save me-2"></i>Save Fingerprint
+                       </button>
+                   </div>
+               </form>
+           </div>
+       </div>
+       
+       <div class="card card-dashboard">
+           <div class="card-header bg-info text-white">
+               <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>About HID Digital Persona 4500</h5>
+           </div>
+           <div class="card-body">
+               <div class="row">
+                   <div class="col-md-4 text-center mb-3 mb-md-0">
+                       <img src="/placeholder.svg?height=200&width=200" alt="HID Digital Persona 4500" class="img-fluid rounded">
+                   </div>
+                   <div class="col-md-8">
+                       <h5>HID Digital Persona 4500 Fingerprint Reader</h5>
+                       <p>The Digital Persona 4500 is a high-performance optical fingerprint reader designed for use in various applications including:</p>
+                       <ul>
+                           <li>Time and attendance systems</li>
+                           <li>Access control</li>
+                           <li>Identity verification</li>
+                       </ul>
+                       <p>Features:</p>
+                       <ul>
+                           <li>Blue LED illumination technology for enhanced image quality</li>
+                           <li>Patented optical design for superior image quality</li>
+                           <li>Rugged design with hard glass platen</li>
+                           <li>Encrypted fingerprint data for secure transmission</li>
+                           <li>Compatible with Windows, Linux, and Android</li>
+                           <li>USB 2.0 interface for easy connectivity</li>
+                           <li>500 DPI resolution for accurate fingerprint capture</li>
+                           <li>Built-in latent fingerprint rejection</li>
+                       </ul>
+                   </div>
+               </div>
+           </div>
+       </div>
+   </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+   document.addEventListener('DOMContentLoaded', function() {
+       const fingerprintReader = document.getElementById('fingerprintReader');
+       const enrollmentStatus = document.getElementById('enrollmentStatus');
+       const captureCount = document.getElementById('captureCount');
+       const startScanBtn = document.getElementById('startScanBtn');
+       const saveBtn = document.getElementById('saveBtn');
+       const fingerprintData = document.getElementById('fingerprintData');
+       const fingerPosition = document.getElementById('fingerPosition');
+       const deviceStatus = document.getElementById('deviceStatus');
+       const deviceStatusText = document.getElementById('deviceStatusText');
+       const qualityBar = document.getElementById('qualityBar');
+       const qualityText = document.getElementById('qualityText');
+       
+       // Finger selection
+       const fingerOptions = document.querySelectorAll('.finger-option');
+       fingerOptions.forEach(option => {
+           option.addEventListener('click', function() {
+               // Remove active class from all options
+               fingerOptions.forEach(opt => opt.classList.remove('active'));
+               // Add active class to clicked option
+               this.classList.add('active');
+               // Update hidden input
+               fingerPosition.value = this.dataset.finger;
+           });
+       });
+       
+       // Check device status
+       checkDeviceStatus();
+       
+       function checkDeviceStatus() {
+           fetch('{{ url_for("biometric.status") }}')
+               .then(response => response.json())
+               .then(data => {
+                   if (data.connected) {
+                       deviceStatus.classList.add('connected');
+                       deviceStatus.classList.remove('disconnected');
+                       deviceStatusText.textContent = `Connected: ${data.device_info.name || 'HID Digital Persona 4500'} (${data.status})`;
+                       startScanBtn.disabled = false;
+                   } else {
+                       deviceStatus.classList.add('disconnected');
+                       deviceStatus.classList.remove('connected');
+                       deviceStatusText.textContent = 'Disconnected: Please connect the fingerprint reader';
+                       startScanBtn.disabled = true;
+                   }
+               })
+               .catch(error => {
+                   console.error('Error checking device status:', error);
+                   deviceStatus.classList.add('disconnected');
+                   deviceStatus.classList.remove('connected');
+                   deviceStatusText.textContent = 'Error: Could not check device status';
+                   startScanBtn.disabled = true;
+               });
+       }
+       
+       // Fingerprint enrollment
+       let capturesDone = 0;
+       let isScanning = false;
+       let capturedTemplates = [];
+       
+       startScanBtn.addEventListener('click', function() {
+           if (isScanning) return;
+           
+           isScanning = true;
+           startScanBtn.disabled = true;
+           startScanBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Scanning...';
+           
+           // Reset if starting a new enrollment
+           if (capturesDone === 0 || capturesDone === 4) {
+               capturesDone = 0;
+               capturedTemplates = [];
+               captureCount.textContent = `${capturesDone}/4`;
+               qualityBar.style.width = '0%';
+               qualityText.textContent = 'Quality: 0%';
+           }
+           
+           enrollmentStatus.textContent = 'Place your finger on the scanner';
+           fingerprintReader.classList.add('scanning');
+           
+           // Call the capture endpoint
+           fetch('{{ url_for("biometric.capture") }}', {
+               method: 'POST',
+               headers: {
+                   'Content-Type': 'application/json',
+               },
+           })
+           .then(response => response.json())
+           .then(data => {
+               if (data.success) {
+                   capturesDone++;
+                   captureCount.textContent = `${capturesDone}/4`;
+                   
+                   // Update quality indicator
+                   qualityBar.style.width = `${data.quality}%`;
+                   qualityText.textContent = `Quality: ${data.quality}%`;
+                   
+                   // Store the template
+                   capturedTemplates.push(data.data);
+                   
+                   if (capturesDone < 4) {
+                       enrollmentStatus.textContent = 'Remove your finger and place it again';
+                       fingerprintReader.classList.remove('scanning');
+                       
+                       setTimeout(() => {
+                           enrollmentStatus.textContent = 'Place your finger on the scanner again';
+                           startScanBtn.disabled = false;
+                           startScanBtn.innerHTML = '<i class="fas fa-fingerprint me-2"></i>Continue Scanning';
+                       }, 1500);
+                   } else {
+                       // Enrollment complete
+                       enrollmentStatus.textContent = 'Enrollment complete!';
+                       fingerprintReader.classList.remove('scanning');
+                       isScanning = false;
+                       
+                       // Combine templates
+                       fingerprintData.value = JSON.stringify(capturedTemplates);
+                       
+                       saveBtn.disabled = false;
+                       startScanBtn.disabled = false;
+                       startScanBtn.innerHTML = '<i class="fas fa-redo me-2"></i>Start Over';
+                   }
+               } else {
+                   enrollmentStatus.textContent = `Error: ${data.message}`;
+                   fingerprintReader.classList.remove('scanning');
+                   isScanning = false;
+                   startScanBtn.disabled = false;
+                   startScanBtn.innerHTML = '<i class="fas fa-fingerprint me-2"></i>Try Again';
+               }
+           })
+           .catch(error => {
+               console.error('Error capturing fingerprint:', error);
+               enrollmentStatus.textContent = 'Error communicating with the server';
+               fingerprintReader.classList.remove('scanning');
+               isScanning = false;
+               startScanBtn.disabled = false;
+               startScanBtn.innerHTML = '<i class="fas fa-fingerprint me-2"></i>Try Again';
+           });
+       });
+   });
+</script>
+{% endblock %}
+

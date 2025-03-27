@@ -1,0 +1,17 @@
+Session Ended
+
+A session has been ended with the following details:
+
+Course: {{ session.course.code }} - {{ session.course.name }}
+Lecturer: {{ session.lecturer.username }}
+Classroom: {{ session.classroom }}
+Start Time: {{ session.start_time.strftime('%d-%m-%Y %H:%M:%S') }}
+End Time: {{ session.end_time.strftime('%d-%m-%Y %H:%M:%S') }}
+Duration: {{ session.duration_minutes()|int }} minutes
+
+This session requires verification by a class representative.
+
+This is an automated notification from the School Management System.
+
+© 2023 School Management System. All rights reserved.
+

@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Mansa College of Education Staff Attendance Recording System{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-lg-row">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="p-3 border-bottom">
+            <h4 class="mb-0">Mansa College of Education</h4>
+            <small>Admin Dashboard</small>
+        </div>
+        <div class="mt-3">
+            <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link active">
+                <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+            </a>
+            <a href="{{ url_for('admin.register_user') }}" class="sidebar-link">
+                <i class="fas fa-user-plus me-2"></i> Register User
+            </a>
+            <a href="{{ url_for('admin.register_course') }}" class="sidebar-link">
+                <i class="fas fa-book me-2"></i> Register Course
+            </a>
+            <a href="{{ url_for('admin.create_session') }}" class="sidebar-link">
+                <i class="fas fa-calendar-plus me-2"></i> Create Session
+            </a>
+            <a href="{{ url_for('admin.reports') }}" class="sidebar-link">
+                <i class="fas fa-chart-bar me-2"></i> Reports
+            </a>
+            <a href="{{ url_for('auth.logout') }}" class="sidebar-link mt-5">
+                <i class="fas fa-sign-out-alt me-2"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <h2 class="mb-4">Admin Dashboard</h2>
+        
+        <!-- Stats Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="card card-dashboard bg-primary text-white h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">Active Sessions</h6>
+                                <h2 class="mb-0">{{ active_sessions|length }}</h2>
+                            </div>
+                            <i class="fas fa-clock fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card card-dashboard bg-success text-white h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">Verified Sessions</h6>
+                                <h2 class="mb-0">{{ verified_sessions|length }}</h2>
+                            </div>
+                            <i class="fas fa-check-circle fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card card-dashboard bg-warning text-dark h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">Pending Sessions</h6>
+                                <h2 class="mb-0">{{ pending_sessions|length }}</h2>
+                            </div>
+                            <i class="fas fa-hourglass-half fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card card-dashboard bg-info text-white h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">Completed Sessions</h6>
+                                <h2 class="mb-0">{{ completed_sessions|length }}</h2>
+                            </div>
+                            <i class="fas fa-flag-checkered fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Active Sessions -->
+        <div class="card card-dashboard mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Active Sessions</h5>
+            </div>
+            <div class="card-body">
+                {% if active_sessions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-responsive-card">
+                            <thead>
+                                <tr>
+                                    <th>Course</th>
+                                    <th>Lecturer</th>
+                                    <th>Employee #</th>
+                                    <th>Department</th>
+                                    <th>Classroom</th>
+                                    <th>Start Time</th>
+                                    <th>Duration</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for session in active_sessions %}
+                                    <tr>
+                                        <td data-label="Course">{{ session.course.code }} - {{ session.course.name }}</td>
+                                        <td data-label="Lecturer">{{ session.lecturer.get_full_name() }}</td>
+                                        <td data-label="Employee #">{{ session.lecturer.employee_number or 'N/A' }}</td>
+                                        <td data-label="Department">{{ session.lecturer.department or 'N/A' }}</td>
+                                        <td data-label="Classroom">{{ session.classroom }}</td>
+                                        <td data-label="Start Time">{{ session.start_time.strftime('%H:%M:%S') }}</td>
+                                        <td data-label="Duration">
+                                            {% set duration = ((now - session.start_time).total_seconds() / 60)|int %}
+                                            {{ duration }} minutes
+                                        </td>
+                                        <td data-label="Status">
+                                            <span class="badge bg-primary status-badge">
+                                                <i class="fas fa-clock me-1"></i> Ongoing
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">No active sessions at the moment.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Pending Sessions -->
+        <div class="card card-dashboard mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-hourglass-half me-2"></i>Pending Sessions</h5>
+            </div>
+            <div class="card-body">
+                {% if pending_sessions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-responsive-card">
+                            <thead>
+                                <tr>
+                                    <th>Course</th>
+                                    <th>Lecturer</th>
+                                    <th>Employee #</th>
+                                    <th>Department</th>
+                                    <th>Classroom</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for session in pending_sessions %}
+                                    <tr>
+                                        <td data-label="Course">{{ session.course.code }} - {{ session.course.name }}</td>
+                                        <td data-label="Lecturer">{{ session.lecturer.get_full_name() }}</td>
+                                        <td data-label="Employee #">{{ session.lecturer.employee_number or 'N/A' }}</td>
+                                        <td data-label="Department">{{ session.lecturer.department or 'N/A' }}</td>
+                                        <td data-label="Classroom">{{ session.classroom }}</td>
+                                        <td data-label="Status">
+                                            <span class="badge bg-warning text-dark status-badge">
+                                                <i class="fas fa-hourglass-half me-1"></i> Pending
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">No pending sessions at the moment.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Recently Completed Sessions -->
+        <div class="card card-dashboard">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>Recently Verified Sessions</h5>
+            </div>
+            <div class="card-body">
+                {% if verified_sessions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-responsive-card">
+                            <thead>
+                                <tr>
+                                    <th>Course</th>
+                                    <th>Lecturer</th>
+                                    <th>Employee #</th>
+                                    <th>Department</th>
+                                    <th>Classroom</th>
+                                    <th>Duration</th>
+                                    <th>Verified By</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for session in verified_sessions[:5] %}
+                                    <tr>
+                                        <td data-label="Course">{{ session.course.code }} - {{ session.course.name }}</td>
+                                        <td data-label="Lecturer">{{ session.lecturer.get_full_name() }}</td>
+                                        <td data-label="Employee #">{{ session.lecturer.employee_number or 'N/A' }}</td>
+                                        <td data-label="Department">{{ session.lecturer.department or 'N/A' }}</td>
+                                        <td data-label="Classroom">{{ session.classroom }}</td>
+                                        <td data-label="Duration">{{ session.duration_minutes()|int }} minutes</td>
+                                        <td data-label="Verified By">
+                                            {% set verifier = User.query.get(session.verified_by) %}
+                                            {{ verifier.username if verifier else 'Unknown' }}
+                                        </td>
+                                        <td data-label="Status">
+                                            <span class="badge bg-success status-badge">
+                                                <i class="fas fa-check-circle me-1"></i> Verified
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if verified_sessions|length > 5 %}
+                        <div class="text-center mt-3">
+                            <a href="{{ url_for('admin.reports') }}" class="btn btn-sm btn-outline-primary">
+                                View All Sessions
+                            </a>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted mb-0">No verified sessions yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

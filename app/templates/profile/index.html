@@ -1,0 +1,470 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - Mansa College of Education Staff Attendance Recording System{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-lg-row">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="p-3 border-bottom">
+            <h4 class="mb-0">Mansa College of Education</h4>
+            <small>{{ current_user.role.capitalize() }} Dashboard</small>
+        </div>
+        <div class="mt-3">
+            {% if current_user.role == 'admin' %}
+                <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link">
+                    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                </a>
+                <a href="{{ url_for('admin.register_user') }}" class="sidebar-link">
+                    <i class="fas fa-user-plus me-2"></i> Register User
+                </a>
+                <a href="{{ url_for('admin.register_course') }}" class="sidebar-link">
+                    <i class="fas fa-book me-2"></i> Register Course
+                </a>
+                <a href="{{ url_for('admin.create_session') }}" class="sidebar-link">
+                    <i class="fas fa-calendar-plus me-2"></i> Create Session
+                </a>
+                <a href="{{ url_for('admin.reports') }}" class="sidebar-link">
+                    <i class="fas fa-chart-bar me-2"></i> Reports
+                </a>
+            {% elif current_user.role == 'lecturer' %}
+                <a href="{{ url_for('lecturer.dashboard') }}" class="sidebar-link">
+                    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                </a>
+            {% elif current_user.role == 'class_rep' %}
+                <a href="{{ url_for('class_rep.dashboard') }}" class="sidebar-link">
+                    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                </a>
+            {% endif %}
+            
+            <a href="{{ url_for('calendar.index') }}" class="sidebar-link">
+                <i class="fas fa-calendar-alt me-2"></i> Calendar
+            </a>
+            
+            <a href="{{ url_for('profile.index') }}" class="sidebar-link active">
+                <i class="fas fa-user-cog me-2"></i> Profile
+            </a>
+            
+            <a href="{{ url_for('auth.logout') }}" class="sidebar-link mt-5">
+                <i class="fas fa-sign-out-alt me-2"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <h2 class="mb-4">My Profile</h2>
+        
+        <div class="row g-4">
+            <div class="col-lg-4 mb-4">
+                <div class="card profile-card">
+                    <div class="profile-header text-center">
+                        <div class="profile-img">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <h4>{{ current_user.username }}</h4>
+                        <p class="mb-0">{{ current_user.role.capitalize() }}</p>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-envelope me-2"></i> Email</span>
+                                <span class="text-truncate ms-2">{{ current_user.email }}</span>
+                            </li>
+                            {% if current_user.role == 'lecturer' %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-id-card me-2"></i> Employee #</span>
+                                <span>{{ current_user.employee_number or 'Not Set' }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-building me-2"></i> Department</span>
+                                <span>{{ current_user.department or 'Not Set' }}</span>
+                            </li>
+                            {% endif %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-user me-2"></i> Facial Biometric</span>
+                                <span>
+                                    {% if current_user.face_encoding %}
+                                        <span class="badge bg-success">Registered</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">Not Registered</span>
+                                    {% endif %}
+                                </span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-fingerprint me-2"></i> Fingerprint</span>
+                                <span>
+                                    {% if current_user.fingerprint_data %}
+                                        <span class="badge bg-success">Registered</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">Not Registered</span>
+                                    {% endif %}
+                                </span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-star me-2"></i> Preferred Method</span>
+                                <span>
+                                    {% if current_user.preferred_biometric == 'face' %}
+                                        <span class="badge bg-primary">Facial Recognition</span>
+                                    {% else %}
+                                        <span class="badge bg-primary">Fingerprint</span>
+                                    {% endif %}
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-8">
+                <div class="card profile-card">
+                    <div class="card-header bg-primary text-white">
+                        <ul class="nav nav-pills card-header-pills" id="profileTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active text-white" id="account-tab" data-bs-toggle="tab" data-bs-target="#account" type="button" role="tab" aria-controls="account" aria-selected="true">
+                                    <i class="fas fa-user-cog me-2"></i>Account
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link text-white" id="biometric-tab" data-bs-toggle="tab" data-bs-target="#biometric" type="button" role="tab" aria-controls="biometric" aria-selected="false">
+                                    <i class="fas fa-fingerprint me-2"></i>Biometric
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-body">
+                        <div class="tab-content" id="profileTabsContent">
+                            <!-- Account Settings Tab -->
+                            <div class="tab-pane fade show active" id="account" role="tabpanel" aria-labelledby="account-tab">
+                                <form method="POST" action="{{ url_for('profile.update') }}">
+                                    <div class="mb-3">
+                                        <label for="username" class="form-label">Username</label>
+                                        <input type="text" class="form-control" id="username" value="{{ current_user.username }}" disabled>
+                                        <small class="text-muted">Username cannot be changed</small>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="email" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email }}">
+                                    </div>
+                                    
+                                    {% if current_user.role == 'lecturer' %}
+                                    <div class="row mb-3">
+                                        <div class="col-md-6 mb-3 mb-md-0">
+                                            <label for="first_name" class="form-label">First Name</label>
+                                            <input type="text" class="form-control" id="first_name" name="first_name" value="{{ current_user.first_name or '' }}">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="last_name" class="form-label">Last Name</label>
+                                            <input type="text" class="form-control" id="last_name" name="last_name" value="{{ current_user.last_name or '' }}">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-6 mb-3 mb-md-0">
+                                            <label for="employee_number" class="form-label">Employee Number</label>
+                                            <input type="text" class="form-control" id="employee_number" name="employee_number" value="{{ current_user.employee_number or '' }}">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="department" class="form-label">Department</label>
+                                            <input type="text" class="form-control" id="department" name="department" value="{{ current_user.department or '' }}">
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <hr>
+                                    <h5>Change Password</h5>
+                                    
+                                    <div class="mb-3">
+                                        <label for="current_password" class="form-label">Current Password</label>
+                                        <input type="password" class="form-control" id="current_password" name="current_password">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="new_password" class="form-label">New Password</label>
+                                        <input type="password" class="form-control" id="new_password" name="new_password">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="confirm_password" class="form-label">Confirm New Password</label>
+                                        <input type="password" class="form-control" id="confirm_password" name="confirm_password">
+                                    </div>
+                                    
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-2"></i>Save Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <!-- Biometric Data Tab -->
+                            <div class="tab-pane fade" id="biometric" role="tabpanel" aria-labelledby="biometric-tab">
+                                <ul class="nav nav-tabs biometric-tabs mb-4" id="biometricDataTabs" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active" id="face-data-tab" data-bs-toggle="tab" data-bs-target="#face-data" type="button" role="tab" aria-controls="face-data" aria-selected="true">
+                                            <i class="fas fa-user me-2"></i>Facial Recognition
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="fingerprint-data-tab" data-bs-toggle="tab" data-bs-target="#fingerprint-data" type="button" role="tab" aria-controls="fingerprint-data" aria-selected="false">
+                                            <i class="fas fa-fingerprint me-2"></i>Fingerprint
+                                        </button>
+                                    </li>
+                                </ul>
+                                
+                                <div class="tab-content" id="biometricDataTabsContent">
+                                    <!-- Facial Recognition Tab -->
+                                    <div class="tab-pane fade show active" id="face-data" role="tabpanel" aria-labelledby="face-data-tab">
+                                        <p>Update your facial biometric data for login verification.</p>
+                                        
+                                        <div class="position-relative mb-4">
+                                            <video id="video" autoplay></video>
+                                            <canvas id="canvas"></canvas>
+                                        </div>
+                                        
+                                        <form method="POST" action="{{ url_for('profile.update_biometric') }}" id="faceForm">
+                                            <input type="hidden" name="biometric_type" value="face">
+                                            <input type="hidden" name="image_data" id="imageData">
+                                            <div class="d-flex flex-column flex-sm-row justify-content-center mb-3 gap-2">
+                                                <button type="button" class="btn btn-primary" id="captureBtn">
+                                                    <i class="fas fa-camera me-2"></i>Capture
+                                                </button>
+                                                <button type="submit" class="btn btn-success" id="saveFaceBtn" disabled>
+                                                    <i class="fas fa-save me-2"></i>Save Facial Data
+                                                </button>
+                                            </div>
+                                        </form>
+                                        
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            Make sure you are in a well-lit area and your face is clearly visible.
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Fingerprint Tab -->
+                                    <div class="tab-pane fade" id="fingerprint-data" role="tabpanel" aria-labelledby="fingerprint-data-tab">
+                                        <p>Register your fingerprint for biometric login.</p>
+                                        
+                                        <div class="row mb-4">
+                                            <div class="col-md-6 mx-auto">
+                                                <div class="fingerprint-scanner">
+                                                    <i class="fas fa-fingerprint fingerprint-icon"></i>
+                                                    <div class="fingerprint-status" id="fingerprintRegStatus"></div>
+                                                </div>
+                                                
+                                                <div class="text-center mb-3">
+                                                    <p id="fingerprintRegMessage">Place your finger on the scanner</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <form method="POST" action="{{ url_for('profile.update_biometric') }}" id="fingerprintForm">
+                                            <input type="hidden" name="biometric_type" value="fingerprint">
+                                            <input type="hidden" name="fingerprint_data" id="fingerprintData">
+                                            <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+                                                <button type="button" class="btn btn-primary" id="scanBtn">
+                                                    <i class="fas fa-fingerprint me-2"></i>Scan Fingerprint
+                                                </button>
+                                                <button type="submit" class="btn btn-success" id="saveFingerBtn" disabled>
+                                                    <i class="fas fa-save me-2"></i>Save Fingerprint
+                                                </button>
+                                            </div>
+                                        </form>
+                                        
+                                        <div class="alert alert-info mt-3">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            Place your finger firmly on the scanner and hold it until the scan is complete.
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <hr>
+                                
+                                <h5 class="mt-4">Preferred Biometric Method</h5>
+                                <p>Select your preferred biometric authentication method for login.</p>
+                                
+                                <form method="POST" action="{{ url_for('profile.update_biometric_preference') }}" class="row g-3">
+                                    <div class="col-md-6 mb-3">
+                                        <div class="biometric-option {% if current_user.preferred_biometric == 'face' %}active{% endif %}" id="face-option">
+                                            <div class="biometric-icon">
+                                                <i class="fas fa-user-circle"></i>
+                                            </div>
+                                            <h5>Facial Recognition</h5>
+                                            <p class="text-muted">Use your face to verify your identity</p>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="preferred_biometric" id="face-radio" value="face" {% if current_user.preferred_biometric == 'face' %}checked{% endif %}>
+                                                <label class="form-check-label" for="face-radio">
+                                                    Select as preferred
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="biometric-option {% if current_user.preferred_biometric == 'fingerprint' %}active{% endif %}" id="fingerprint-option">
+                                            <div class="biometric-icon">
+                                                <i class="fas fa-fingerprint"></i>
+                                            </div>
+                                            <h5>Fingerprint</h5>
+                                            <p class="text-muted">Use your fingerprint to verify your identity</p>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="preferred_biometric" id="fingerprint-radio" value="fingerprint" {% if current_user.preferred_biometric == 'fingerprint' %}checked{% endif %}>
+                                                <label class="form-check-label" for="fingerprint-radio">
+                                                    Select as preferred
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 mt-3">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-2"></i>Save Preference
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Biometric option selection
+    document.querySelectorAll('.biometric-option').forEach(option => {
+        option.addEventListener('click', function() {
+            const radioInput = this.querySelector('input[type="radio"]');
+            radioInput.checked = true;
+            
+            document.querySelectorAll('.biometric-option').forEach(opt => {
+                opt.classList.remove('active');
+            });
+            
+            this.classList.add('active');
+        });
+    });
+
+    // Facial recognition functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const captureBtn = document.getElementById('captureBtn');
+        const saveFaceBtn = document.getElementById('saveFaceBtn');
+        const imageData = document.getElementById('imageData');
+        let stream = null;
+        
+        // Start webcam when biometric tab is shown
+        document.getElementById('biometric-tab').addEventListener('click', function() {
+            startVideo();
+        });
+        
+        // Start webcam when face data tab is shown
+        document.getElementById('face-data-tab').addEventListener('click', function() {
+            startVideo();
+        });
+        
+        // Stop webcam when fingerprint data tab is shown
+        document.getElementById('fingerprint-data-tab').addEventListener('click', function() {
+            stopVideo();
+        });
+        
+        // Stop webcam when account tab is shown
+        document.getElementById('account-tab').addEventListener('click', function() {
+            stopVideo();
+        });
+        
+        // Access webcam
+        async function startVideo() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+            } catch (err) {
+                console.error('Error accessing webcam:', err);
+                alert('Error accessing webcam. Please make sure your camera is connected and permissions are granted.');
+            }
+        }
+        
+        // Stop webcam
+        function stopVideo() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+        }
+        
+        // Capture image from webcam
+        captureBtn.addEventListener('click', function() {
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Convert canvas to base64 image data
+            const data = canvas.toDataURL('image/png');
+            imageData.value = data;
+            
+            // Enable save button
+            saveFaceBtn.disabled = false;
+            
+            // Visual feedback
+            captureBtn.classList.remove('btn-primary');
+            captureBtn.classList.add('btn-secondary');
+            captureBtn.innerHTML = '<i class="fas fa-redo me-2"></i>Recapture';
+        });
+        
+        // Fingerprint scanning simulation
+        const scanBtn = document.getElementById('scanBtn');
+        const saveFingerBtn = document.getElementById('saveFingerBtn');
+        const fingerprintRegStatus = document.getElementById('fingerprintRegStatus');
+        const fingerprintRegMessage = document.getElementById('fingerprintRegMessage');
+        const fingerprintData = document.getElementById('fingerprintData');
+        
+        scanBtn.addEventListener('click', function() {
+            // Disable scan button during scanning
+            scanBtn.disabled = true;
+            
+            // Update message
+            fingerprintRegMessage.textContent = 'Scanning fingerprint... 0%';
+            
+            // Simulate scanning progress
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 10;
+                fingerprintRegMessage.textContent = `Scanning fingerprint... ${progress}%`;
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    
+                    // Update status and message
+                    fingerprintRegStatus.classList.add('active');
+                    fingerprintRegMessage.textContent = 'Fingerprint scanned successfully!';
+                    
+                    // Generate random fingerprint data for simulation
+                    const randomData = btoa(String.fromCharCode.apply(null, crypto.getRandomValues(new Uint8Array(64))));
+                    fingerprintData.value = randomData;
+                    
+                    // Enable save button and reset scan button
+                    saveFingerBtn.disabled = false;
+                    scanBtn.disabled = false;
+                    scanBtn.innerHTML = '<i class="fas fa-redo me-2"></i>Rescan Fingerprint';
+                }
+            }, 300);
+        });
+    });
+</script>
+{% endblock %}
+

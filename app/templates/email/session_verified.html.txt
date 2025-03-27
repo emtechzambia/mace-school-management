@@ -1,0 +1,18 @@
+Session Verified
+
+A session has been verified with the following details:
+
+Course: {{ session.course.code }} - {{ session.course.name }}
+Lecturer: {{ session.lecturer.username }}
+Classroom: {{ session.classroom }}
+Start Time: {{ session.start_time.strftime('%d-%m-%Y %H:%M:%S') }}
+End Time: {{ session.end_time.strftime('%d-%m-%Y %H:%M:%S') }}
+Duration: {{ session.duration_minutes()|int }} minutes
+Verified By: {{ session.verifier.username }}
+
+This session has been successfully verified and recorded.
+
+This is an automated notification from the School Management System.
+
+© 2023 School Management System. All rights reserved.
+

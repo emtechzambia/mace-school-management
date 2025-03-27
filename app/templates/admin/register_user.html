@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Register User - Mansa College of Education Staff Attendance Recording System{% endblock %}
+
+{% block content %}
+<div class="d-flex">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="p-3 border-bottom">
+            <h4 class="mb-0">Mansa College of Education</h4>
+            <small>Admin Dashboard</small>
+        </div>
+        <div class="mt-3">
+            <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link">
+                <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+            </a>
+            <a href="{{ url_for('admin.register_user') }}" class="sidebar-link active">
+                <i class="fas fa-user-plus me-2"></i> Register User
+            </a>
+            <a href="{{ url_for('admin.register_course') }}" class="sidebar-link">
+                <i class="fas fa-book me-2"></i> Register Course
+            </a>
+            <a href="{{ url_for('admin.create_session') }}" class="sidebar-link">
+                <i class="fas fa-calendar-plus me-2"></i> Create Session
+            </a>
+            <a href="{{ url_for('admin.reports') }}" class="sidebar-link">
+                <i class="fas fa-chart-bar me-2"></i> Reports
+            </a>
+            <a href="{{ url_for('auth.logout') }}" class="sidebar-link mt-5">
+                <i class="fas fa-sign-out-alt me-2"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content flex-grow-1">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <h2 class="mb-4">Register New User</h2>
+        
+        <div class="card card-form">
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('admin.register_user') }}">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="username" class="form-label">Username</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" class="form-control" id="username" name="username" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Email</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <input type="email" class="form-control" id="email" name="email" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="password" class="form-label">Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                <input type="password" class="form-control" id="password" name="password" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="role" class="form-label">Role</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user-tag"></i></span>
+                                <select class="form-select" id="role" name="role" required onchange="toggleLecturerFields()">
+                                    <option value="" selected disabled>Select Role</option>
+                                    <option value="admin">Administrator</option>
+                                    <option value="lecturer">Lecturer</option>
+                                    <option value="class_rep">Class Representative</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Lecturer-specific fields (hidden by default) -->
+                    <div id="lecturerFields" style="display: none;">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="employee_number" class="form-label">Employee Number</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-id-card"></i></span>
+                                    <input type="text" class="form-control" id="employee_number" name="employee_number">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="department" class="form-label">Department</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-building"></i></span>
+                                    <input type="text" class="form-control" id="department" name="department">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="first_name" class="form-label">First Name</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                    <input type="text" class="form-control" id="first_name" name="first_name">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="last_name" class="form-label">Last Name</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                    <input type="text" class="form-control" id="last_name" name="last_name">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-user-plus me-2"></i>Register User
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    function toggleLecturerFields() {
+        const role = document.getElementById('role').value;
+        const lecturerFields = document.getElementById('lecturerFields');
+        
+        if (role === 'lecturer') {
+            lecturerFields.style.display = 'block';
+            // Make lecturer fields required
+            document.getElementById('employee_number').required = true;
+            document.getElementById('department').required = true;
+            document.getElementById('first_name').required = true;
+            document.getElementById('last_name').required = true;
+        } else {
+            lecturerFields.style.display = 'none';
+            // Make lecturer fields not required
+            document.getElementById('employee_number').required = false;
+            document.getElementById('department').required = false;
+            document.getElementById('first_name').required = false;
+            document.getElementById('last_name').required = false;
+        }
+    }
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleLecturerFields();
+    });
+</script>
+{% endblock %}
+{% endblock %}
+

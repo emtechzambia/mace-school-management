@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Biometric Logs - School Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-lg-row">
+   <!-- Sidebar -->
+   <div class="sidebar">
+       <div class="p-3 border-bottom">
+           <h4 class="mb-0">School Management</h4>
+           <small>{{ current_user.role.capitalize() }} Dashboard</small>
+       </div>
+       <div class="mt-3">
+           {% if current_user.role == 'admin' %}
+               <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link">
+                   <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+               </a>
+           {% elif current_user.role == 'lecturer' %}
+               <a href="{{ url_for('lecturer.dashboard') }}" class="sidebar-link">
+                   <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+               </a>
+           {% elif current_user.role == 'class_rep' %}
+               <a href="{{ url_for('class_rep.dashboard') }}" class="sidebar-link">
+                   <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+               </a>
+           {% endif %}
+           
+           <a href="{{ url_for('calendar.index') }}" class="sidebar-link">
+               <i class="fas fa-calendar-alt me-2"></i> Calendar
+           </a>
+           
+           <a href="{{ url_for('profile.index') }}" class="sidebar-link">
+               <i class="fas fa-user-cog me-2"></i> Profile
+           </a>
+           
+           <a href="{{ url_for('biometric.enroll') }}" class="sidebar-link">
+               <i class="fas fa-fingerprint me-2"></i> Fingerprint Enrollment
+           </a>
+           
+           <a href="{{ url_for('biometric.logs') }}" class="sidebar-link active">
+               <i class="fas fa-history me-2"></i> Biometric Logs
+           </a>
+           
+           <a href="{{ url_for('auth.logout') }}" class="sidebar-link mt-5">
+               <i class="fas fa-sign-out-alt me-2"></i> Logout
+           </a>
+       </div>
+   </div>
+
+   <!-- Main Content -->
+   <div class="main-content">
+       {% with messages = get_flashed_messages() %}
+           {% if messages %}
+               {% for message in messages %}
+                   <div class="alert alert-success alert-dismissible fade show" role="alert">
+                       {{ message }}
+                       <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                   </div>
+               {% endfor %}
+           {% endif %}
+       {% endwith %}
+
+       <h2 class="mb-4">Biometric Activity Logs</h2>
+       
+       <div class="card card-dashboard mb-4">
+           <div class="card-header bg-primary text-white">
+               <h5 class="mb-0"><i class="fas fa-history me-2"></i>Your Biometric Activity</h5>
+           </div>
+           <div class="card-body">
+               {% if logs %}
+                   <div class="table-responsive">
+                       <table class="table table-hover table-responsive-card">
+                           <thead>
+                               <tr>
+                                   <th>Date & Time</th>
+                                   <th>Action</th>
+                                   <th>Finger</th>
+                                   <th>Status</th>
+                                   <th>IP Address</th>
+                                   <th>Device</th>
+                               </tr>
+                           </thead>
+                           <tbody>
+                               {% for log in logs %}
+                                   <tr>
+                                       <td data-label="Date & Time">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                       <td data-label="Action">
+                                           {% if log.action == 'enroll' %}
+                                               <span class="badge bg-primary">Enrollment</span>
+                                           {% elif log.action == 'verify_clock_in' %}
+                                               <span class="badge bg-success">Clock In Verification</span>
+                                           {% elif log.action == 'verify_clock_out' %}
+                                               <span class="badge bg-danger">Clock Out Verification</span>
+                                           {% elif log.action == 'clock_in' %}
+                                               <span class="badge bg-success">Clock In</span>
+                                           {% elif log.action == 'clock_out' %}
+                                               <span class="badge bg-danger">Clock Out</span>
+                                           {% else %}
+                                               <span class="badge bg-secondary">{{ log.action }}</span>
+                                           {% endif %}
+                                       </td>
+                                       <td data-label="Finger">
+                                           {% if log.finger_position %}
+                                               {{ log.finger_position.replace('_', ' ').title() }}
+                                           {% else %}
+                                               N/A
+                                           {% endif %}
+                                       </td>
+                                       <td data-label="Status">
+                                           {% if log.status == 'success' %}
+                                               <span class="badge bg-success">Success</span>
+                                           {% else %}
+                                               <span class="badge bg-danger">Failed</span>
+                                           {% endif %}
+                                       </td>
+                                       <td data-label="IP Address">{{ log.ip_address or 'N/A' }}</td>
+                                       <td data-label="Device">
+                                           {% if log.device_info %}
+                                               {{ log.device_info[:30] }}...
+                                           {% else %}
+                                               N/A
+                                           {% endif %}
+                                       </td>
+                                   </tr>
+                               {% endfor %}
+                           </tbody>
+                       </table>
+                   </div>
+               {% else %}
+                   <p class="text-muted mb-0">No biometric activity logs found.</p>
+               {% endif %}
+           </div>
+       </div>
+       
+       <div class="card card-dashboard">
+           <div class="card-header bg-info text-white">
+               <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Security Information</h5>
+           </div>
+           <div class="card-body">
+               <div class="alert alert-info">
+                   <i class="fas fa-info-circle me-2"></i>
+                   <strong>Why we log biometric activity:</strong> We maintain logs of all biometric verification attempts to ensure the security and integrity of the attendance system. These logs help prevent fraud and provide an audit trail for all clock-in and clock-out activities.
+               </div>
+               
+               <h5>What we log:</h5>
+               <ul>
+                   <li><strong>Date and time</strong> of each biometric verification attempt</li>
+                   <li><strong>Action type</strong> (enrollment, clock-in verification, clock-out verification)</li>
+                   <li><strong>Finger used</strong> for verification</li>
+                   <li><strong>Success or failure</strong> of the verification attempt</li>
+                   <li><strong>IP address</strong> from which the verification was attempted</li>
+                   <li><strong>Device information</strong> used for the verification</li>
+               </ul>
+               
+               <h5>Data Protection:</h5>
+               <ul>
+                   <li>Your actual fingerprint data is never stored in its raw form</li>
+                   <li>Only encrypted templates derived from your fingerprint are stored</li>
+                   <li>These templates cannot be reverse-engineered to recreate your fingerprint</li>
+                   <li>All biometric data is stored securely and is only accessible to authorized personnel</li>
+               </ul>
+           </div>
+       </div>
+   </div>
+</div>
+{% endblock %}
+
