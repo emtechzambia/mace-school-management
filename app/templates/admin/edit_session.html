@@ -4,150 +4,167 @@
 
 {% block content %}
 <div class="d-flex">
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="p-3 border-bottom">
-            <h4 class="mb-0">Mansa College of Education</h4>
-            <small>Admin Dashboard</small>
-        </div>
-        <div class="mt-3">
-            <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link">
-                <i class="fas fa-tachometer-alt me-2"></i> Dashboard
-            </a>
-            <a href="{{ url_for('admin.register_user') }}" class="sidebar-link">
-                <i class="fas fa-user-plus me-2"></i> Register User
-            </a>
-            <a href="{{ url_for('admin.manage_users') }}" class="sidebar-link">
-                <i class="fas fa-users-cog me-2"></i> Manage Users
-            </a>
-            <a href="{{ url_for('admin.register_course') }}" class="sidebar-link">
-                <i class="fas fa-book me-2"></i> Register Course
-            </a>
-            <a href="{{ url_for('admin.manage_courses') }}" class="sidebar-link">
-                <i class="fas fa-books me-2"></i> Manage Courses
-            </a>
-            <a href="{{ url_for('admin.create_session') }}" class="sidebar-link">
-                <i class="fas fa-calendar-plus me-2"></i> Create Session
-            </a>
-            <a href="{{ url_for('admin.manage_sessions') }}" class="sidebar-link active">
-                <i class="fas fa-calendar-alt me-2"></i> Manage Sessions
-            </a>
-            <a href="{{ url_for('admin.reports') }}" class="sidebar-link">
-                <i class="fas fa-chart-bar me-2"></i> Reports
-            </a>
-            <a href="{{ url_for('auth.logout') }}" class="sidebar-link mt-5">
-                <i class="fas fa-sign-out-alt me-2"></i> Logout
-            </a>
-        </div>
-    </div>
+   <!-- Sidebar -->
+   <div class="sidebar">
+       <div class="p-3 border-bottom">
+           <h4 class="mb-0">Mansa College of Education</h4>
+           <small>Admin Dashboard</small>
+       </div>
+       <div class="mt-3">
+           <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link">
+               <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+           </a>
+           <a href="{{ url_for('admin.register_user') }}" class="sidebar-link">
+               <i class="fas fa-user-plus me-2"></i> Register User
+           </a>
+           <a href="{{ url_for('admin.manage_users') }}" class="sidebar-link">
+               <i class="fas fa-users-cog me-2"></i> Manage Users
+           </a>
+           <a href="{{ url_for('admin.register_course') }}" class="sidebar-link">
+               <i class="fas fa-book me-2"></i> Register Course
+           </a>
+           <a href="{{ url_for('admin.manage_courses') }}" class="sidebar-link">
+               <i class="fas fa-books me-2"></i> Manage Courses
+           </a>
+           <a href="{{ url_for('admin.create_session') }}" class="sidebar-link">
+               <i class="fas fa-calendar-plus me-2"></i> Create Session
+           </a>
+           <a href="{{ url_for('admin.manage_sessions') }}" class="sidebar-link active">
+               <i class="fas fa-calendar-alt me-2"></i> Manage Sessions
+           </a>
+           <a href="{{ url_for('admin.reports') }}" class="sidebar-link">
+               <i class="fas fa-chart-bar me-2"></i> Reports
+           </a>
+           <a href="{{ url_for('auth.logout') }}" class="sidebar-link mt-5">
+               <i class="fas fa-sign-out-alt me-2"></i> Logout
+           </a>
+       </div>
+   </div>
 
-    <!-- Main Content -->
-    <div class="main-content flex-grow-1">
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+   <!-- Main Content -->
+   <div class="main-content flex-grow-1">
+       {% with messages = get_flashed_messages() %}
+           {% if messages %}
+               {% for message in messages %}
+                   <div class="alert alert-success alert-dismissible fade show" role="alert">
+                       {{ message }}
+                       <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                   </div>
+               {% endfor %}
+           {% endif %}
+       {% endwith %}
 
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>Edit Session</h2>
-            <a href="{{ url_for('admin.manage_sessions') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Back to Session List
-            </a>
-        </div>
-        
-        <div class="card card-form">
-            <div class="card-body p-4">
-                <form method="POST" action="{{ url_for('admin.edit_session', session_id=session.id) }}">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="course_id" class="form-label">Course</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-book"></i></span>
-                                <select class="form-select" id="course_id" name="course_id" required>
-                                    {% for course in courses %}
-                                        <option value="{{ course.id }}" {% if course.id == session.course_id %}selected{% endif %}>
-                                            {{ course.code }} - {{ course.name }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="lecturer_id" class="form-label">Lecturer</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-chalkboard-teacher"></i></span>
-                                <select class="form-select" id="lecturer_id" name="lecturer_id" required>
-                                    {% for lecturer in lecturers %}
-                                        <option value="{{ lecturer.id }}" {% if lecturer.id == session.lecturer_id %}selected{% endif %}>
-                                            {{ lecturer.get_full_name() }} ({{ lecturer.employee_number or 'No ID' }})
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="classroom" class="form-label">Classroom</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-door-open"></i></span>
-                                <input type="text" class="form-control" id="classroom" name="classroom" value="{{ session.classroom }}" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="status" class="form-label">Status</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
-                                <select class="form-select" id="status" name="status" required>
-                                    <option value="pending" {% if session.status == 'pending' %}selected{% endif %}>Pending</option>
-                                    <option value="ongoing" {% if session.status == 'ongoing' %}selected{% endif %}>Ongoing</option>
-                                    <option value="completed" {% if session.status == 'completed' %}selected{% endif %}>Completed</option>
-                                    <option value="verified" {% if session.status == 'verified' %}selected{% endif %}>Verified</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="start_time" class="form-label">Start Time</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-clock"></i></span>
-                                <input type="datetime-local" class="form-control" id="start_time" name="start_time" 
-                                       value="{{ session.start_time.strftime('%Y-%m-%dT%H:%M') if session.start_time else '' }}">
-                            </div>
-                            <small class="text-muted">Leave blank for pending sessions</small>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="end_time" class="form-label">End Time</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-clock"></i></span>
-                                <input type="datetime-local" class="form-control" id="end_time" name="end_time" 
-                                       value="{{ session.end_time.strftime('%Y-%m-%dT%H:%M') if session.end_time else '' }}">
-                            </div>
-                            <small class="text-muted">Leave blank for pending or ongoing sessions</small>
-                        </div>
-                    </div>
-                    
-                    <div class="d-flex justify-content-between">
-                        <a href="{{ url_for('admin.manage_sessions') }}" class="btn btn-secondary">
-                            <i class="fas fa-times me-2"></i>Cancel
-                        </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-2"></i>Save Changes
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+       <div class="d-flex justify-content-between align-items-center mb-4">
+           <h2>Edit Session</h2>
+           <a href="{{ url_for('admin.manage_sessions') }}" class="btn btn-secondary">
+               <i class="fas fa-arrow-left me-2"></i>Back to Session List
+           </a>
+       </div>
+       
+       <div class="card card-form">
+           <div class="card-body p-4">
+               <form method="POST" action="{{ url_for('admin.edit_session', session_id=session.id) }}">
+                   <div class="row mb-3">
+                       <div class="col-md-6">
+                           <label for="course_id" class="form-label">Course</label>
+                           <div class="input-group">
+                               <span class="input-group-text"><i class="fas fa-book"></i></span>
+                               <select class="form-select" id="course_id" name="course_id" required>
+                                   {% for course in courses %}
+                                       <option value="{{ course.id }}" {% if course.id == session.course_id %}selected{% endif %}>
+                                           {{ course.code }} - {{ course.name }}
+                                       </option>
+                                   {% endfor %}
+                               </select>
+                           </div>
+                       </div>
+                       <div class="col-md-6">
+                           <label for="lecturer_id" class="form-label">Lecturer</label>
+                           <div class="input-group">
+                               <span class="input-group-text"><i class="fas fa-chalkboard-teacher"></i></span>
+                               <select class="form-select" id="lecturer_id" name="lecturer_id" required>
+                                   {% for lecturer in lecturers %}
+                                       <option value="{{ lecturer.id }}" {% if lecturer.id == session.lecturer_id %}selected{% endif %}>
+                                           {{ lecturer.get_full_name() }} ({{ lecturer.employee_number or 'No ID' }})
+                                       </option>
+                                   {% endfor %}
+                               </select>
+                           </div>
+                       </div>
+                   </div>
+                   
+                   <div class="row mb-3">
+                       <div class="col-md-6">
+                           <label for="classroom" class="form-label">Classroom</label>
+                           <div class="input-group">
+                               <span class="input-group-text"><i class="fas fa-door-open"></i></span>
+                               <input type="text" class="form-control" id="classroom" name="classroom" value="{{ session.classroom }}" required>
+                           </div>
+                       </div>
+                       <div class="col-md-6">
+                           <label for="class_rep_id" class="form-label">Class Representative</label>
+                           <div class="input-group">
+                               <span class="input-group-text"><i class="fas fa-user-graduate"></i></span>
+                               <select class="form-select" id="class_rep_id" name="class_rep_id" required>
+                                   <option value="">None</option>
+                                   {% for rep in class_reps %}
+                                       <option value="{{ rep.id }}" {% if rep.id == session.class_rep_id %}selected{% endif %}>
+                                           {{ rep.get_full_name() }}
+                                       </option>
+                                   {% endfor %}
+                               </select>
+                           </div>
+                       </div>
+                   </div>
+                   
+                   <div class="row mb-3">
+                       <div class="col-md-6">
+                           <label for="status" class="form-label">Status</label>
+                           <div class="input-group">
+                               <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                               <select class="form-select" id="status" name="status" required>
+                                   <option value="pending" {% if session.status == 'pending' %}selected{% endif %}>Pending</option>
+                                   <option value="ongoing" {% if session.status == 'ongoing' %}selected{% endif %}>Ongoing</option>
+                                   <option value="completed" {% if session.status == 'completed' %}selected{% endif %}>Completed</option>
+                                   <option value="verified" {% if session.status == 'verified' %}selected{% endif %}>Verified</option>
+                               </select>
+                           </div>
+                       </div>
+                       <div class="col-md-6">
+                           <label for="start_time" class="form-label">Start Time</label>
+                           <div class="input-group">
+                               <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                               <input type="datetime-local" class="form-control" id="start_time" name="start_time" 
+                                      value="{{ session.start_time.strftime('%Y-%m-%dT%H:%M') if session.start_time else '' }}">
+                           </div>
+                           <small class="text-muted">Leave blank for pending sessions</small>
+                       </div>
+                   </div>
+                   
+                   <div class="row mb-3">
+                       <div class="col-md-6">
+                           <label for="end_time" class="form-label">End Time</label>
+                           <div class="input-group">
+                               <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                               <input type="datetime-local" class="form-control" id="end_time" name="end_time" 
+                                      value="{{ session.end_time.strftime('%Y-%m-%dT%H:%M') if session.end_time else '' }}">
+                           </div>
+                           <small class="text-muted">Leave blank for pending or ongoing sessions</small>
+                       </div>
+                   </div>
+                   
+                   <div class="d-flex justify-content-between">
+                       <a href="{{ url_for('admin.manage_sessions') }}" class="btn btn-secondary">
+                           <i class="fas fa-times me-2"></i>Cancel
+                       </a>
+                       <button type="submit" class="btn btn-primary">
+                           <i class="fas fa-save me-2"></i>Save Changes
+                       </button>
+                   </div>
+               </form>
+           </div>
+       </div>
+   </div>
 </div>
 {% endblock %}
 

@@ -18,18 +18,11 @@ class User(db.Model, UserMixin):
    role = db.Column(db.String(20), nullable=False)  # admin, lecturer, class_rep
    face_encoding = db.Column(db.LargeBinary, nullable=True)
    fingerprint_data = db.Column(db.LargeBinary, nullable=True)
-   
-   # Enhanced fingerprint storage for multiple fingers
-   fingerprint_right_index = db.Column(db.Text, nullable=True)
-   fingerprint_right_thumb = db.Column(db.Text, nullable=True)
-   fingerprint_left_index = db.Column(db.Text, nullable=True)
-   fingerprint_left_thumb = db.Column(db.Text, nullable=True)
-   
-   preferred_biometric = db.Column(db.String(20), default='fingerprint')  # face, fingerprint
+   preferred_biometric = db.Column(db.String(20), default='face')  # face, fingerprint
    sessions = db.relationship('Session', backref='lecturer', lazy=True, foreign_keys='Session.lecturer_id')
    verified_sessions = db.relationship('Session', backref='verifier', lazy=True, foreign_keys='Session.verified_by')
+   assigned_sessions = db.relationship('Session', backref='class_rep', lazy=True, foreign_keys='Session.class_rep_id')
    attendance_records = db.relationship('StaffAttendance', backref='staff', lazy=True)
-   biometric_logs = db.relationship('BiometricLog', backref='user', lazy=True)
    
    # Additional fields for lecturers
    employee_number = db.Column(db.String(20), nullable=True)
@@ -76,13 +69,6 @@ class User(db.Model, UserMixin):
        """Check if the staff member is currently clocked in"""
        attendance = self.get_today_attendance()
        return attendance and attendance.clock_in and not attendance.clock_out
-   
-   def has_enrolled_fingerprints(self):
-       """Check if the user has enrolled fingerprints"""
-       return bool(self.fingerprint_right_index or 
-                  self.fingerprint_right_thumb or 
-                  self.fingerprint_left_index or 
-                  self.fingerprint_left_thumb)
 
 class Course(db.Model):
    id = db.Column(db.Integer, primary_key=True)
@@ -95,6 +81,7 @@ class Session(db.Model):
    session_id = db.Column(db.String(36), unique=True, default=lambda: str(uuid.uuid4()))
    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
    lecturer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+   class_rep_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
    start_time = db.Column(db.DateTime, nullable=True)
    end_time = db.Column(db.DateTime, nullable=True)
    status = db.Column(db.String(20), default='pending')  # pending, ongoing, completed, verified
@@ -148,14 +135,6 @@ class StaffAttendance(db.Model):
    notes = db.Column(db.Text, nullable=True)
    location = db.Column(db.String(100), nullable=True)
    
-   # New fields for biometric verification
-   clock_in_verified = db.Column(db.Boolean, default=False)
-   clock_out_verified = db.Column(db.Boolean, default=False)
-   clock_in_ip = db.Column(db.String(45), nullable=True)  # IPv6 can be up to 45 chars
-   clock_out_ip = db.Column(db.String(45), nullable=True)
-   clock_in_device = db.Column(db.String(255), nullable=True)
-   clock_out_device = db.Column(db.String(255), nullable=True)
-   
    # Define standard work hours
    WORK_START_TIME = time(8, 0)  # 8:00 AM
    WORK_END_TIME = time(17, 0)   # 5:00 PM
@@ -196,24 +175,4 @@ class StaffAttendance(db.Model):
        elif self.status == 'half-day':
            return 'bg-info'
        return 'bg-secondary'
-
-class BiometricLog(db.Model):
-   id = db.Column(db.Integer, primary_key=True)
-   user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-   timestamp = db.Column(db.DateTime, default=datetime.now)
-   action = db.Column(db.String(50), nullable=False)  # enroll, verify_clock_in, verify_clock_out
-   finger_position = db.Column(db.String(20), nullable=True)  # right_index, right_thumb, etc.
-   status = db.Column(db.String(20), nullable=False)  # success, failed
-   ip_address = db.Column(db.String(45), nullable=True)
-   device_info = db.Column(db.Text, nullable=True)
-   details = db.Column(db.Text, nullable=True)  # JSON string with additional details
-   
-   def get_details_dict(self):
-       """Return details as a dictionary"""
-       if self.details:
-           try:
-               return json.loads(self.details)
-           except:
-               pass
-       return {}
 

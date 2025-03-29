@@ -5,235 +5,552 @@
 {% block extra_css %}
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css" rel="stylesheet">
 <style>
-    .fc-event {
-        cursor: pointer;
-    }
-    .fc-toolbar-title {
-        font-size: 1.5rem !important;
-    }
-    .event-details {
-        margin-bottom: 0;
-    }
-    .event-details dt {
-        font-weight: 600;
-    }
+   .fc-event {
+       cursor: pointer;
+       border-radius: 4px;
+       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+       transition: transform 0.2s ease;
+   }
+   .fc-event:hover {
+       transform: translateY(-2px);
+       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+   }
+   .fc-toolbar-title {
+       font-size: 1.5rem !important;
+       font-weight: 600;
+   }
+   .event-details {
+       margin-bottom: 0;
+   }
+   .event-details dt {
+       font-weight: 600;
+       color: #495057;
+   }
+   .event-details dd {
+       margin-bottom: 0.5rem;
+   }
+   
+   /* Responsive calendar styles */
+   @media (max-width: 767.98px) {
+       .fc-toolbar {
+           flex-direction: column;
+           gap: 0.5rem;
+       }
+       .fc-toolbar-chunk {
+           display: flex;
+           justify-content: center;
+           width: 100%;
+       }
+       .fc-toolbar-title {
+           font-size: 1.2rem !important;
+       }
+       .fc-button {
+           padding: 0.3rem 0.6rem;
+           font-size: 0.8rem;
+       }
+       .fc-daygrid-day-number {
+           font-size: 0.8rem;
+       }
+       .fc-col-header-cell-cushion {
+           font-size: 0.8rem;
+       }
+       .fc-daygrid-event {
+           font-size: 0.7rem;
+       }
+       .fc-view-harness {
+           height: auto !important;
+           min-height: 400px;
+       }
+   }
+   
+   /* Calendar view switcher */
+   .calendar-view-switcher {
+       display: flex;
+       justify-content: center;
+       margin-bottom: 1rem;
+       gap: 0.5rem;
+   }
+   .calendar-view-switcher .btn {
+       border-radius: 20px;
+       padding: 0.3rem 1rem;
+       font-size: 0.85rem;
+   }
+   
+   /* Event modal improvements */
+   .modal-event-header {
+       padding: 1rem;
+       border-radius: 6px 6px 0 0;
+       color: white;
+   }
+   .modal-event-header.pending {
+       background-color: #ffc107;
+       color: #212529;
+   }
+   .modal-event-header.ongoing {
+       background-color: #0d6efd;
+   }
+   .modal-event-header.completed {
+       background-color: #6c757d;
+   }
+   .modal-event-header.verified {
+       background-color: #198754;
+   }
+   .event-icon {
+       font-size: 2rem;
+       margin-right: 1rem;
+   }
+   .event-time-badge {
+       display: inline-flex;
+       align-items: center;
+       background-color: rgba(255, 255, 255, 0.2);
+       padding: 0.25rem 0.75rem;
+       border-radius: 20px;
+       font-size: 0.85rem;
+       margin-top: 0.5rem;
+   }
+   .event-time-badge i {
+       margin-right: 0.5rem;
+   }
+   
+   /* Calendar loading state */
+   .calendar-loading {
+       position: absolute;
+       top: 0;
+       left: 0;
+       right: 0;
+       bottom: 0;
+       background-color: rgba(255, 255, 255, 0.7);
+       display: flex;
+       justify-content: center;
+       align-items: center;
+       z-index: 10;
+   }
+   .calendar-loading-spinner {
+       width: 3rem;
+       height: 3rem;
+   }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="d-flex">
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="p-3 border-bottom">
-            <h4 class="mb-0">School Management</h4>
-            <small>{{ current_user.role.capitalize() }} Dashboard</small>
-        </div>
-        <div class="mt-3">
-            {% if current_user.role == 'admin' %}
-                <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link">
-                    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
-                </a>
-                <a href="{{ url_for('admin.register_user') }}" class="sidebar-link">
-                    <i class="fas fa-user-plus me-2"></i> Register User
-                </a>
-                <a href="{{ url_for('admin.register_course') }}" class="sidebar-link">
-                    <i class="fas fa-book me-2"></i> Register Course
-                </a>
-                <a href="{{ url_for('admin.create_session') }}" class="sidebar-link">
-                    <i class="fas fa-calendar-plus me-2"></i> Create Session
-                </a>
-                <a href="{{ url_for('admin.reports') }}" class="sidebar-link">
-                    <i class="fas fa-chart-bar me-2"></i> Reports
-                </a>
-            {% elif current_user.role == 'lecturer' %}
-                <a href="{{ url_for('lecturer.dashboard') }}" class="sidebar-link">
-                    <i class="fas fa-url_for('lecturer.dashboard')}}" class="sidebar-link">
-                    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
-                </a>
-            {% elif current_user.role == 'class_rep' %}
-                <a href="{{ url_for('class_rep.dashboard') }}" class="sidebar-link">
-                    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
-                </a>
-            {% endif %}
-            
-            <a href="{{ url_for('calendar.index') }}" class="sidebar-link active">
-                <i class="fas fa-calendar-alt me-2"></i> Calendar
-            </a>
-            
-            <a href="{{ url_for('profile.index') }}" class="sidebar-link">
-                <i class="fas fa-user-cog me-2"></i> Profile
-            </a>
-            
-            <a href="{{ url_for('auth.logout') }}" class="sidebar-link mt-5">
-                <i class="fas fa-sign-out-alt me-2"></i> Logout
-            </a>
-        </div>
-    </div>
+   <!-- Sidebar -->
+   <div class="sidebar">
+       <div class="p-3 border-bottom">
+           <h4 class="mb-0">School Management</h4>
+           <small>{{ current_user.role.capitalize() }} Dashboard</small>
+       </div>
+       <div class="mt-3">
+           {% if current_user.role == 'admin' %}
+               <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link">
+                   <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+               </a>
+               <a href="{{ url_for('admin.register_user') }}" class="sidebar-link">
+                   <i class="fas fa-user-plus me-2"></i> Register User
+               </a>
+               <a href="{{ url_for('admin.register_course') }}" class="sidebar-link">
+                   <i class="fas fa-book me-2"></i> Register Course
+               </a>
+               <a href="{{ url_for('admin.create_session') }}" class="sidebar-link">
+                   <i class="fas fa-calendar-plus me-2"></i> Create Session
+               </a>
+               <a href="{{ url_for('admin.reports') }}" class="sidebar-link">
+                   <i class="fas fa-chart-bar me-2"></i> Reports
+               </a>
+           {% elif current_user.role == 'lecturer' %}
+               <a href="{{ url_for('lecturer.dashboard') }}" class="sidebar-link">
+                   <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+               </a>
+           {% elif current_user.role == 'class_rep' %}
+               <a href="{{ url_for('class_rep.dashboard') }}" class="sidebar-link">
+                   <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+               </a>
+           {% endif %}
+           
+           <a href="{{ url_for('calendar.index') }}" class="sidebar-link active">
+               <i class="fas fa-calendar-alt me-2"></i> Calendar
+           </a>
+           
+           <a href="{{ url_for('profile.index') }}" class="sidebar-link">
+               <i class="fas fa-user-cog me-2"></i> Profile
+           </a>
+           
+           <a href="{{ url_for('auth.logout') }}" class="sidebar-link mt-5">
+               <i class="fas fa-sign-out-alt me-2"></i> Logout
+           </a>
+       </div>
+   </div>
 
-    <!-- Main Content -->
-    <div class="main-content flex-grow-1">
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+   <!-- Main Content -->
+   <div class="main-content flex-grow-1">
+       {% with messages = get_flashed_messages() %}
+           {% if messages %}
+               {% for message in messages %}
+                   <div class="alert alert-success alert-dismissible fade show" role="alert">
+                       {{ message }}
+                       <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                   </div>
+               {% endfor %}
+           {% endif %}
+       {% endwith %}
 
-        <h2 class="mb-4">Session Calendar</h2>
-        
-        <div class="card card-dashboard">
-            <div class="card-body">
-                <div id="calendar"></div>
-            </div>
-        </div>
-    </div>
+       <div class="d-flex justify-content-between align-items-center mb-4">
+           <h2>Session Calendar</h2>
+           <div class="d-flex align-items-center">
+               <div class="dropdown d-none d-md-block">
+                   <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="calendarFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                       <i class="fas fa-filter me-2"></i>Filter
+                   </button>
+                   <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="calendarFilterDropdown">
+                       <li><a class="dropdown-item filter-status" href="#" data-status="all">All Sessions</a></li>
+                       <li><hr class="dropdown-divider"></li>
+                       <li><a class="dropdown-item filter-status" href="#" data-status="pending">Pending Sessions</a></li>
+                       <li><a class="dropdown-item filter-status" href="#" data-status="ongoing">Ongoing Sessions</a></li>
+                       <li><a class="dropdown-item filter-status" href="#" data-status="completed">Completed Sessions</a></li>
+                       <li><a class="dropdown-item filter-status" href="#" data-status="verified">Verified Sessions</a></li>
+                   </ul>
+               </div>
+           </div>
+       </div>
+       
+       <!-- Mobile View Switcher (visible only on small screens) -->
+       <div class="calendar-view-switcher d-md-none mb-3">
+           <button class="btn btn-sm btn-outline-primary view-switch active" data-view="dayGridMonth">Month</button>
+           <button class="btn btn-sm btn-outline-primary view-switch" data-view="timeGridWeek">Week</button>
+           <button class="btn btn-sm btn-outline-primary view-switch" data-view="timeGridDay">Day</button>
+           <button class="btn btn-sm btn-outline-primary view-switch" data-view="listWeek">List</button>
+       </div>
+       
+       <div class="card card-dashboard">
+           <div class="card-body">
+               <div class="position-relative">
+                   <div id="calendar"></div>
+                   <div class="calendar-loading d-none">
+                       <div class="spinner-border text-primary calendar-loading-spinner" role="status">
+                           <span class="visually-hidden">Loading...</span>
+                       </div>
+                   </div>
+               </div>
+           </div>
+       </div>
+       
+       <!-- Legend -->
+       <div class="card card-dashboard mt-3">
+           <div class="card-body">
+               <h5 class="mb-3">Legend</h5>
+               <div class="d-flex flex-wrap gap-3">
+                   <div class="d-flex align-items-center">
+                       <div class="me-2" style="width: 20px; height: 20px; background-color: #ffc107; border-radius: 4px;"></div>
+                       <span>Pending</span>
+                   </div>
+                   <div class="d-flex align-items-center">
+                       <div class="me-2" style="width: 20px; height: 20px; background-color: #0d6efd; border-radius: 4px;"></div>
+                       <span>Ongoing</span>
+                   </div>
+                   <div class="d-flex align-items-center">
+                       <div class="me-2" style="width: 20px; height: 20px; background-color: #6c757d; border-radius: 4px;"></div>
+                       <span>Completed</span>
+                   </div>
+                   <div class="d-flex align-items-center">
+                       <div class="me-2" style="width: 20px; height: 20px; background-color: #198754; border-radius: 4px;"></div>
+                       <span>Verified</span>
+                   </div>
+               </div>
+           </div>
+       </div>
+   </div>
 </div>
 
 <!-- Event Details Modal -->
 <div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="eventTitle">Session Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <dl class="row event-details">
-                    <dt class="col-sm-4">Course:</dt>
-                    <dd class="col-sm-8" id="eventCourse"></dd>
-                    
-                    <dt class="col-sm-4">Lecturer:</dt>
-                    <dd class="col-sm-8" id="eventLecturer"></dd>
-                    
-                    <dt class="col-sm-4">Classroom:</dt>
-                    <dd class="col-sm-8" id="eventClassroom"></dd>
-                    
-                    <dt class="col-sm-4">Date:</dt>
-                    <dd class="col-sm-8" id="eventDate"></dd>
-                    
-                    <dt class="col-sm-4">Time:</dt>
-                    <dd class="col-sm-8" id="eventTime"></dd>
-                    
-                    <dt class="col-sm-4">Status:</dt>
-                    <dd class="col-sm-8" id="eventStatus"></dd>
-                </dl>
-            </div>
-            <div class="modal-footer" id="eventActions">
-                <!-- Dynamic buttons will be added here based on session status and user role -->
-            </div>
-        </div>
-    </div>
+   <div class="modal-dialog modal-dialog-centered">
+       <div class="modal-content">
+           <div class="modal-event-header pending" id="eventModalHeader">
+               <div class="d-flex align-items-center">
+                   <div class="event-icon" id="eventIcon">
+                       <i class="fas fa-hourglass-half"></i>
+                   </div>
+                   <div>
+                       <h5 class="modal-title mb-1" id="eventTitle">Session Details</h5>
+                       <div class="event-time-badge" id="eventTimeBadge">
+                           <i class="fas fa-clock"></i>
+                           <span id="eventTimeInfo">Loading...</span>
+                       </div>
+                   </div>
+               </div>
+           </div>
+           <div class="modal-body">
+               <dl class="row event-details">
+                   <dt class="col-sm-4">Course:</dt>
+                   <dd class="col-sm-8" id="eventCourse"></dd>
+                   
+                   <dt class="col-sm-4">Lecturer:</dt>
+                   <dd class="col-sm-8" id="eventLecturer"></dd>
+                   
+                   <dt class="col-sm-4">Classroom:</dt>
+                   <dd class="col-sm-8" id="eventClassroom"></dd>
+                   
+                   <dt class="col-sm-4">Date:</dt>
+                   <dd class="col-sm-8" id="eventDate"></dd>
+                   
+                   <dt class="col-sm-4">Time:</dt>
+                   <dd class="col-sm-8" id="eventTime"></dd>
+                   
+                   <dt class="col-sm-4">Status:</dt>
+                   <dd class="col-sm-8" id="eventStatus"></dd>
+               </dl>
+           </div>
+           <div class="modal-footer" id="eventActions">
+               <!-- Dynamic buttons will be added here based on session status and user role -->
+           </div>
+       </div>
+   </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const calendarEl = document.getElementById('calendar');
-        const calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek,timeGridDay'
-            },
-            events: "{{ url_for('calendar.events') }}",
-            eventTimeFormat: {
-                hour: '2-digit',
-                minute: '2-digit',
-                meridiem: 'short'
-            },
-            eventClick: function(info) {
-                showEventDetails(info.event);
-            }
-        });
-        calendar.render();
-        
-        // Function to show event details in modal
-        function showEventDetails(event) {
-            const modal = new bootstrap.Modal(document.getElementById('eventModal'));
-            const props = event.extendedProps;
-            
-            // Format date and time
-            const start = new Date(event.start);
-            const end = new Date(event.end);
-            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const timeOptions = { hour: '2-digit', minute: '2-digit' };
-            
-            // Set modal content
-            document.getElementById('eventTitle').textContent = props.course;
-            document.getElementById('eventCourse').textContent = props.course;
-            document.getElementById('eventLecturer').textContent = props.lecturer;
-            document.getElementById('eventClassroom').textContent = props.classroom;
-            document.getElementById('eventDate').textContent = start.toLocaleDateString(undefined, dateOptions);
-            document.getElementById('eventTime').textContent = `${start.toLocaleTimeString(undefined, timeOptions)} - ${end.toLocaleTimeString(undefined, timeOptions)}`;
-            
-            // Set status with badge
-            const statusEl = document.getElementById('eventStatus');
-            let statusBadge = '';
-            
-            if (props.status === 'pending') {
-                statusBadge = '<span class="badge bg-warning text-dark">Pending</span>';
-            } else if (props.status === 'ongoing') {
-                statusBadge = '<span class="badge bg-primary">Ongoing</span>';
-            } else if (props.status === 'completed') {
-                statusBadge = '<span class="badge bg-secondary">Completed</span>';
-            } else if (props.status === 'verified') {
-                statusBadge = '<span class="badge bg-success">Verified</span>';
-            }
-            
-            statusEl.innerHTML = statusBadge;
-            
-            // Set action buttons based on user role and session status
-            const actionsEl = document.getElementById('eventActions');
-            actionsEl.innerHTML = '';
-            
-            // Add appropriate action buttons based on user role and session status
-            {% if current_user.role == 'lecturer' %}
-                if (props.status === 'pending') {
-                    const startBtn = document.createElement('button');
-                    startBtn.className = 'btn btn-success';
-                    startBtn.innerHTML = '<i class="fas fa-play me-2"></i>Start Session';
-                    startBtn.onclick = function() {
-                        window.location.href = "{{ url_for('lecturer.dashboard') }}#upcoming";
-                    };
-                    actionsEl.appendChild(startBtn);
-                } else if (props.status === 'ongoing') {
-                    const endBtn = document.createElement('button');
-                    endBtn.className = 'btn btn-danger';
-                    endBtn.innerHTML = '<i class="fas fa-stop me-2"></i>End Session';
-                    endBtn.onclick = function() {
-                        window.location.href = "{{ url_for('lecturer.dashboard') }}#active";
-                    };
-                    actionsEl.appendChild(endBtn);
-                }
-            {% elif current_user.role == 'class_rep' %}
-                if (props.status === 'completed') {
-                    const verifyBtn = document.createElement('button');
-                    verifyBtn.className = 'btn btn-success';
-                    verifyBtn.innerHTML = '<i class="fas fa-check me-2"></i>Verify Session';
-                    verifyBtn.onclick = function() {
-                        window.location.href = "{{ url_for('class_rep.dashboard') }}#completed";
-                    };
-                    actionsEl.appendChild(verifyBtn);
-                }
-            {% endif %}
-            
-            // Add close button
-            const closeBtn = document.createElement('button');
-            closeBtn.className = 'btn btn-secondary';
-            closeBtn.textContent = 'Close';
-            closeBtn.setAttribute('data-bs-dismiss', 'modal');
-            actionsEl.appendChild(closeBtn);
-            
-            modal.show();
-        }
-    });
+   document.addEventListener('DOMContentLoaded', function() {
+       const calendarEl = document.getElementById('calendar');
+       const loadingEl = document.querySelector('.calendar-loading');
+       
+       // Show loading indicator
+       function showLoading() {
+           loadingEl.classList.remove('d-none');
+       }
+       
+       // Hide loading indicator
+       function hideLoading() {
+           loadingEl.classList.add('d-none');
+       }
+       
+       // Determine initial view based on screen size
+       let initialView = 'dayGridMonth';
+       if (window.innerWidth < 768) {
+           initialView = 'listWeek';
+       }
+       
+       // Initialize calendar
+       const calendar = new FullCalendar.Calendar(calendarEl, {
+           initialView: initialView,
+           headerToolbar: {
+               left: 'prev,next today',
+               center: 'title',
+               right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+           },
+           events: {
+               url: "{{ url_for('calendar.events') }}",
+               failure: function() {
+                   alert('There was an error loading events!');
+               },
+               extraParams: function() {
+                   return {
+                       status: window.currentStatusFilter || 'all'
+                   };
+               }
+           },
+           eventTimeFormat: {
+               hour: '2-digit',
+               minute: '2-digit',
+               meridiem: 'short'
+           },
+           eventClick: function(info) {
+               showEventDetails(info.event);
+           },
+           loading: function(isLoading) {
+               if (isLoading) {
+                   showLoading();
+               } else {
+                   hideLoading();
+               }
+           },
+           height: 'auto',
+           windowResize: function(view) {
+               if (window.innerWidth < 768) {
+                   calendar.changeView('listWeek');
+               }
+           },
+           eventDidMount: function(info) {
+               // Add tooltip for events
+               const tooltip = new bootstrap.Tooltip(info.el, {
+                   title: info.event.title,
+                   placement: 'top',
+                   trigger: 'hover',
+                   container: 'body'
+               });
+           }
+       });
+       calendar.render();
+       
+       // Handle mobile view switcher
+       document.querySelectorAll('.view-switch').forEach(button => {
+           button.addEventListener('click', function() {
+               const view = this.getAttribute('data-view');
+               calendar.changeView(view);
+               
+               // Update active state
+               document.querySelectorAll('.view-switch').forEach(btn => {
+                   btn.classList.remove('active');
+               });
+               this.classList.add('active');
+           });
+       });
+       
+       // Handle status filtering
+       window.currentStatusFilter = 'all';
+       document.querySelectorAll('.filter-status').forEach(link => {
+           link.addEventListener('click', function(e) {
+               e.preventDefault();
+               const status = this.getAttribute('data-status');
+               window.currentStatusFilter = status;
+               calendar.refetchEvents();
+               
+               // Update dropdown button text
+               document.getElementById('calendarFilterDropdown').innerHTML = 
+                   `<i class="fas fa-filter me-2"></i>${this.textContent}`;
+           });
+       });
+       
+       // Function to show event details in modal
+       function showEventDetails(event) {
+           const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+           const props = event.extendedProps;
+           
+           // Format date and time
+           const start = new Date(event.start);
+           const end = new Date(event.end);
+           const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+           const timeOptions = { hour: '2-digit', minute: '2-digit' };
+           
+           // Set modal content
+           document.getElementById('eventTitle').textContent = props.course;
+           document.getElementById('eventCourse').textContent = props.course;
+           document.getElementById('eventLecturer').textContent = props.lecturer;
+           document.getElementById('eventClassroom').textContent = props.classroom;
+           document.getElementById('eventDate').textContent = start.toLocaleDateString(undefined, dateOptions);
+           document.getElementById('eventTime').textContent = `${start.toLocaleTimeString(undefined, timeOptions)} - ${end.toLocaleTimeString(undefined, timeOptions)}`;
+           
+           // Set time badge info
+           let timeInfo = '';
+           if (props.status === 'ongoing') {
+               const now = new Date();
+               const diffMs = now - start;
+               const diffMins = Math.floor(diffMs / 60000);
+               timeInfo = `Started ${diffMins} minutes ago`;
+           } else if (props.status === 'pending') {
+               timeInfo = 'Not started yet';
+           } else if (props.status === 'completed' || props.status === 'verified') {
+               const durationMs = end - start;
+               const durationMins = Math.floor(durationMs / 60000);
+               timeInfo = `Duration: ${durationMins} minutes`;
+           }
+           document.getElementById('eventTimeInfo').textContent = timeInfo;
+           
+           // Set modal header style and icon based on status
+           const modalHeader = document.getElementById('eventModalHeader');
+           const eventIcon = document.getElementById('eventIcon');
+           modalHeader.className = 'modal-event-header';
+           
+           if (props.status === 'pending') {
+               modalHeader.classList.add('pending');
+               eventIcon.innerHTML = '<i class="fas fa-hourglass-half"></i>';
+           } else if (props.status === 'ongoing') {
+               modalHeader.classList.add('ongoing');
+               eventIcon.innerHTML = '<i class="fas fa-play-circle"></i>';
+           } else if (props.status === 'completed') {
+               modalHeader.classList.add('completed');
+               eventIcon.innerHTML = '<i class="fas fa-check-circle"></i>';
+           } else if (props.status === 'verified') {
+               modalHeader.classList.add('verified');
+               eventIcon.innerHTML = '<i class="fas fa-shield-alt"></i>';
+           }
+           
+           // Set status with badge
+           const statusEl = document.getElementById('eventStatus');
+           let statusBadge = '';
+           
+           if (props.status === 'pending') {
+               statusBadge = '<span class="badge bg-warning text-dark">Pending</span>';
+           } else if (props.status === 'ongoing') {
+               statusBadge = '<span class="badge bg-primary">Ongoing</span>';
+           } else if (props.status === 'completed') {
+               statusBadge = '<span class="badge bg-secondary">Completed</span>';
+           } else if (props.status === 'verified') {
+               statusBadge = '<span class="badge bg-success">Verified</span>';
+           }
+           
+           statusEl.innerHTML = statusBadge;
+           
+           // Set action buttons based on user role and session status
+           const actionsEl = document.getElementById('eventActions');
+           actionsEl.innerHTML = '';
+           
+           // Add appropriate action buttons based on user role and session status
+           {% if current_user.role == 'lecturer' %}
+               if (props.status === 'pending') {
+                   const startBtn = document.createElement('button');
+                   startBtn.className = 'btn btn-success';
+                   startBtn.innerHTML = '<i class="fas fa-play me-2"></i>Start Session';
+                   startBtn.onclick = function() {
+                       window.location.href = "{{ url_for('lecturer.dashboard') }}#upcoming";
+                   };
+                   actionsEl.appendChild(startBtn);
+               } else if (props.status === 'ongoing') {
+                   const endBtn = document.createElement('button');
+                   endBtn.className = 'btn btn-danger';
+                   endBtn.innerHTML = '<i class="fas fa-stop me-2"></i>End Session';
+                   endBtn.onclick = function() {
+                       window.location.href = "{{ url_for('lecturer.dashboard') }}#active";
+                   };
+                   actionsEl.appendChild(endBtn);
+               }
+           {% elif current_user.role == 'class_rep' %}
+               if (props.status === 'completed') {
+                   const verifyBtn = document.createElement('button');
+                   verifyBtn.className = 'btn btn-success';
+                   verifyBtn.innerHTML = '<i class="fas fa-check me-2"></i>Verify Session';
+                   verifyBtn.onclick = function() {
+                       window.location.href = "{{ url_for('class_rep.dashboard') }}#completed";
+                   };
+                   actionsEl.appendChild(verifyBtn);
+               }
+           {% endif %}
+           
+           // Add close button
+           const closeBtn = document.createElement('button');
+           closeBtn.className = 'btn btn-secondary';
+           closeBtn.textContent = 'Close';
+           closeBtn.setAttribute('data-bs-dismiss', 'modal');
+           actionsEl.appendChild(closeBtn);
+           
+           modal.show();
+       }
+       
+       // Handle responsive calendar
+       function handleResponsiveCalendar() {
+           if (window.innerWidth < 768) {
+               // On small screens, default to list view
+               if (calendar.view.type === 'dayGridMonth' || 
+                   calendar.view.type === 'timeGridWeek' || 
+                   calendar.view.type === 'timeGridDay') {
+                   calendar.changeView('listWeek');
+                   
+                   // Update active button in view switcher
+                   document.querySelectorAll('.view-switch').forEach(btn => {
+                       btn.classList.remove('active');
+                   });
+                   document.querySelector('.view-switch[data-view="listWeek"]').classList.add('active');
+               }
+           }
+       }
+       
+       // Initial call
+       handleResponsiveCalendar();
+       
+       // Listen for window resize
+       window.addEventListener('resize', handleResponsiveCalendar);
+   });
 </script>
 {% endblock %}
 

@@ -292,28 +292,34 @@ def delete_course(course_id):
 @login_required
 @admin_required
 def create_session():
-    if request.method == 'POST':
-        course_id = request.form.get('course_id')
-        lecturer_id = request.form.get('lecturer_id')
-        classroom = request.form.get('classroom')
-        
-        new_session = Session(
-            course_id=course_id,
-            lecturer_id=lecturer_id,
-            classroom=classroom,
-            status='pending'
-        )
-        
-        db.session.add(new_session)
-        db.session.commit()
-        
-        flash('Session created successfully')
-        return redirect(url_for('admin.manage_sessions'))
-    
-    courses = Course.query.all()
-    lecturers = User.query.filter_by(role='lecturer').all()
-    
-    return render_template('admin/create_session.html', courses=courses, lecturers=lecturers)
+   if request.method == 'POST':
+       course_id = request.form.get('course_id')
+       lecturer_id = request.form.get('lecturer_id')
+       classroom = request.form.get('classroom')
+       class_rep_id = request.form.get('class_rep_id')
+       
+       new_session = Session(
+           course_id=course_id,
+           lecturer_id=lecturer_id,
+           classroom=classroom,
+           class_rep_id=class_rep_id,
+           status='pending'
+       )
+       
+       db.session.add(new_session)
+       db.session.commit()
+       
+       flash('Session created successfully')
+       return redirect(url_for('admin.manage_sessions'))
+   
+   courses = Course.query.all()
+   lecturers = User.query.filter_by(role='lecturer').all()
+   class_reps = User.query.filter_by(role='class_rep').all()
+   
+   return render_template('admin/create_session.html', 
+                         courses=courses, 
+                         lecturers=lecturers,
+                         class_reps=class_reps)
 
 @bp.route('/manage_sessions')
 @login_required
@@ -362,45 +368,49 @@ def manage_sessions():
 @login_required
 @admin_required
 def edit_session(session_id):
-    session = Session.query.get_or_404(session_id)
-    
-    if request.method == 'POST':
-        course_id = request.form.get('course_id')
-        lecturer_id = request.form.get('lecturer_id')
-        classroom = request.form.get('classroom')
-        status = request.form.get('status')
-        start_time = request.form.get('start_time')
-        end_time = request.form.get('end_time')
-        
-        # Update session details
-        session.course_id = course_id
-        session.lecturer_id = lecturer_id
-        session.classroom = classroom
-        session.status = status
-        
-        # Update start time if provided
-        if start_time:
-            session.start_time = datetime.strptime(start_time, '%Y-%m-%dT%H:%M')
-        else:
-            session.start_time = None
-        
-        # Update end time if provided
-        if end_time:
-            session.end_time = datetime.strptime(end_time, '%Y-%m-%dT%H:%M')
-        else:
-            session.end_time = None
-        
-        db.session.commit()
-        flash('Session updated successfully')
-        return redirect(url_for('admin.manage_sessions'))
-    
-    courses = Course.query.all()
-    lecturers = User.query.filter_by(role='lecturer').all()
-    
-    return render_template('admin/edit_session.html', 
-                          session=session, 
-                          courses=courses, 
-                          lecturers=lecturers)
+   session = Session.query.get_or_404(session_id)
+   
+   if request.method == 'POST':
+       course_id = request.form.get('course_id')
+       lecturer_id = request.form.get('lecturer_id')
+       classroom = request.form.get('classroom')
+       status = request.form.get('status')
+       start_time = request.form.get('start_time')
+       end_time = request.form.get('end_time')
+       class_rep_id = request.form.get('class_rep_id')
+       
+       # Update session details
+       session.course_id = course_id
+       session.lecturer_id = lecturer_id
+       session.classroom = classroom
+       session.status = status
+       session.class_rep_id = class_rep_id if class_rep_id else None
+       
+       # Update start time if provided
+       if start_time:
+           session.start_time = datetime.strptime(start_time, '%Y-%m-%dT%H:%M')
+       else:
+           session.start_time = None
+       
+       # Update end time if provided
+       if end_time:
+           session.end_time = datetime.strptime(end_time, '%Y-%m-%dT%H:%M')
+       else:
+           session.end_time = None
+       
+       db.session.commit()
+       flash('Session updated successfully')
+       return redirect(url_for('admin.manage_sessions'))
+   
+   courses = Course.query.all()
+   lecturers = User.query.filter_by(role='lecturer').all()
+   class_reps = User.query.filter_by(role='class_rep').all()
+   
+   return render_template('admin/edit_session.html', 
+                         session=session, 
+                         courses=courses, 
+                         lecturers=lecturers,
+                         class_reps=class_reps)
 
 @bp.route('/delete_session/<int:session_id>', methods=['POST'])
 @login_required
