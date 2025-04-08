@@ -40,6 +40,16 @@ def dashboard():
 @login_required
 @lecturer_required
 def start_session(session_id):
+    # Check if lecturer already has an active session
+    active_session = Session.query.filter_by(
+        lecturer_id=current_user.id,
+        status='ongoing'
+    ).first()
+    
+    if active_session:
+        flash('You already have an active session. Please end it before starting a new one.')
+        return redirect(url_for('lecturer.dashboard'))
+
     session_obj = Session.query.filter_by(session_id=session_id).first()
     if not session_obj:
         flash('Session not found')
@@ -49,7 +59,7 @@ def start_session(session_id):
         flash('You are not assigned to this session')
         return redirect(url_for('lecturer.dashboard'))
     
-    session_obj.start_time = datetime.now()
+    session_obj.start_time = datetime.now()  # Use current time when starting session
     session_obj.status = 'ongoing'
     db.session.commit()
     
