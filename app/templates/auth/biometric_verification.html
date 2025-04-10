@@ -67,6 +67,117 @@
         color: #0a58ca;
         text-decoration: underline;
     }
+    .scanning-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border: 2px solid #0d6efd;
+        border-radius: 5px;
+        animation: pulse 2s infinite;
+        display: none;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 0.3; }
+        50% { opacity: 0.8; }
+        100% { opacity: 0.3; }
+    }
+    
+    #canvas, #video {
+        width: 100%;
+        height: auto;
+        max-width: 100%;
+        background-color: #000;
+        border-radius: 8px;
+    }
+    
+    .capture-btn {
+        width: 60px;
+        height: 60px;
+        background-color: #f8f9fa;
+        border: 3px solid #0d6efd;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s;
+    }
+    
+    .capture-btn:hover {
+        background-color: #e9ecef;
+    }
+    
+    .capture-btn::after {
+        content: '';
+        width: 45px;
+        height: 45px;
+        background-color: #0d6efd;
+        border-radius: 50%;
+        transition: all 0.3s;
+    }
+    
+    .capture-btn:hover::after {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .fingerprint-scanner {
+        width: 150px;
+        height: 150px;
+        border: 3px solid #dee2e6;
+        border-radius: 50%;
+        position: relative;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .fingerprint-icon {
+        font-size: 80px;
+        color: #0d6efd;
+    }
+    
+    .fingerprint-status {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: 50%;
+        border: 3px solid transparent;
+        transition: all 0.3s;
+    }
+    
+    .fingerprint-status.active {
+        border-color: #198754;
+        animation: scan 1s linear infinite;
+        background: radial-gradient(circle, rgba(25,135,84,0.2) 0%, rgba(255,255,255,0) 70%);
+    }
+    
+    @keyframes scan {
+        0% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.4); }
+        100% { box-shadow: 0 0 0 20px rgba(25, 135, 84, 0); }
+    }
+    
+    .biometric-tabs .nav-link {
+        color: #6c757d;
+        font-weight: 500;
+        border: none;
+        border-bottom: 2px solid transparent;
+        border-radius: 0;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s;
+    }
+    
+    .biometric-tabs .nav-link.active {
+        color: #0d6efd;
+        background-color: transparent;
+        border-bottom-color: #0d6efd;
+    }
 </style>
 {% endblock %}
 
@@ -116,9 +227,9 @@
                             <p>Please look at the camera for facial recognition</p>
                         </div>
                         
-                        <div class="position-relative mb-4">
-                            <video id="video" autoplay></video>
-                            <canvas id="canvas"></canvas>
+                        <div class="position-relative mb-4" style="max-width: 640px; margin: 0 auto;">
+                            <video id="video" autoplay style="width: 100%; height: auto; display: block;"></video>
+                            <canvas id="canvas" style="width: 100%; height: auto; display: none;"></canvas>
                             <div class="scanning-overlay" id="scanningOverlay"></div>
                         </div>
                         
@@ -126,7 +237,9 @@
                             <input type="hidden" name="biometric_type" value="face">
                             <input type="hidden" name="image_data" id="imageData">
                             <div class="d-flex justify-content-center mb-3">
-                                <div class="capture-btn" id="captureBtn"></div>
+                                <button type="button" class="btn btn-primary" id="captureBtn">
+                                    <i class="fas fa-camera me-2"></i>Capture
+                                </button>
                             </div>
                             <div class="d-grid gap-2">
                                 <button type="submit" class="btn btn-primary" id="verifyFaceBtn" disabled>
@@ -134,6 +247,15 @@
                                 </button>
                             </div>
                         </form>
+                        
+                        <div class="alert alert-info mt-3" id="faceVerificationInfo">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Please ensure good lighting and position your face clearly in the frame.
+                        </div>
+                        <div class="alert alert-warning mt-3 d-none" id="faceVerificationStatus">
+                            <i class="fas fa-spinner fa-spin me-2"></i>
+                            <span id="faceVerificationMessage">Processing...</span>
+                        </div>
                     </div>
                     
                     <!-- Fingerprint Tab -->
@@ -199,8 +321,11 @@
     
     // Start webcam when page loads (since face tab is active by default)
     window.addEventListener('load', async function() {
+        console.log('Window loaded, initializing verification...');
         // Set active tab based on user preference if available
         const preferredBiometric = '{{ current_user.preferred_biometric }}';
+        console.log('Preferred biometric:', preferredBiometric);
+        
         if (preferredBiometric === 'fingerprint') {
             document.getElementById('fingerprint-tab').click();
         } else {
@@ -211,46 +336,114 @@
     // Access webcam
     async function startVideo() {
         try {
-            webcamStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            console.log('Starting video...');
+            if (webcamStream) {
+                console.log('Stream already exists, stopping first');
+                stopVideo();
+            }
+            
             const video = document.getElementById('video');
-            video.srcObject = webcamStream;
+            const canvas = document.getElementById('canvas');
+            
+            // Reset UI elements
+            video.style.display = 'block';
+            canvas.style.display = 'none';
+            document.getElementById('verifyFaceBtn').disabled = true;
             document.getElementById('scanningOverlay').style.display = 'block';
+            document.getElementById('faceVerificationStatus').classList.add('d-none');
+            document.getElementById('faceVerificationInfo').classList.remove('d-none');
+            
+            webcamStream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    facingMode: "user"
+                }
+            });
+            
+            video.srcObject = webcamStream;
+            
+            // Configure canvas dimensions once video metadata is loaded
+            video.onloadedmetadata = function() {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                console.log(`Video dimensions: ${video.videoWidth}x${video.videoHeight}`);
+            };
+            
+            // Ensure video starts playing
+            await video.play();
+            console.log('Video playback started');
+            
         } catch (err) {
             console.error('Error accessing webcam:', err);
-            alert('Error accessing webcam. Please make sure your camera is connected and permissions are granted.');
+            const errorMsg = document.getElementById('faceVerificationStatus');
+            errorMsg.classList.remove('d-none');
+            errorMsg.classList.remove('alert-warning');
+            errorMsg.classList.add('alert-danger');
+            document.getElementById('faceVerificationMessage').textContent = 
+                'Error accessing webcam. Please make sure your camera is connected and permissions are granted.';
+            document.getElementById('faceVerificationInfo').classList.add('d-none');
         }
     }
     
     // Stop webcam
     function stopVideo() {
         if (webcamStream) {
+            console.log('Stopping video stream');
             webcamStream.getTracks().forEach(track => track.stop());
             const video = document.getElementById('video');
             video.srcObject = null;
+            webcamStream = null;
             document.getElementById('scanningOverlay').style.display = 'none';
         }
     }
     
     // Capture image from webcam
     document.getElementById('captureBtn').addEventListener('click', function() {
+        console.log('Capture button clicked');
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
+        
+        if (!webcamStream || !video.srcObject) {
+            console.log('No active stream, starting video');
+            startVideo();
+            return;
+        }
+        
         const context = canvas.getContext('2d');
         
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        // Ensure proper dimensions
+        if (video.videoWidth) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+        } else {
+            canvas.width = 640;
+            canvas.height = 480;
+        }
+        
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        console.log('Image captured to canvas');
         
-        // Convert canvas to base64 image data
-        const data = canvas.toDataURL('image/png');
-        document.getElementById('imageData').value = data;
+        // Convert to image data and store in hidden field
+        const imageData = canvas.toDataURL('image/jpeg', 0.9);
+        document.getElementById('imageData').value = imageData;
         
-        // Enable verify button
+        // Show canvas preview and hide video
+        video.style.display = 'none';
+        canvas.style.display = 'block';
+        document.getElementById('scanningOverlay').style.display = 'none';
+        
+        // Update UI
+        this.innerHTML = '<i class="fas fa-redo me-2"></i>Recapture';
         document.getElementById('verifyFaceBtn').disabled = false;
         
-        // Visual feedback
-        this.style.borderColor = '#198754';
-        this.style.backgroundColor = '#d1e7dd';
+        // Update status
+        const statusEl = document.getElementById('faceVerificationStatus');
+        statusEl.classList.remove('d-none');
+        statusEl.classList.remove('alert-danger');
+        statusEl.classList.add('alert-success');
+        document.getElementById('faceVerificationMessage').textContent = 'Image captured! Click "Verify with Face" to proceed.';
+        document.getElementById('faceVerificationInfo').classList.add('d-none');
     });
     
     // Simulate fingerprint scanning

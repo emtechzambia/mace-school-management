@@ -8,6 +8,7 @@ import face_recognition
 import io
 import base64
 import numpy as np
+import re
 
 @bp.route('/')
 @login_required
@@ -65,6 +66,99 @@ def update():
     flash('Profile updated successfully')
     return redirect(url_for('profile.index'))
 
+@bp.route('/check_face_detection', methods=['POST'])
+@login_required
+def check_face_detection():
+    """Endpoint to verify if a face is detected in the uploaded image before saving"""
+    try:
+        # Get image data from form
+        image_data = request.form.get('image_data')
+        if not image_data:
+            return jsonify({'success': False, 'message': 'No image data received'})
+        
+        # Process the image
+        image_data = re.sub('^data:image/.+;base64,', '', image_data)
+        image_bytes = base64.b64decode(image_data)
+        image = Image.open(io.BytesIO(image_bytes))
+        
+        # Convert to RGB mode (important for face_recognition)
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+            
+        # Convert to numpy array
+        image_np = np.array(image)
+        
+        # Detect faces using face_recognition library
+        face_locations = face_recognition.face_locations(image_np)
+        
+        if not face_locations:
+            return jsonify({
+                'success': False, 
+                'message': 'No face detected. Please ensure your face is visible and centered.'
+            })
+        
+        if len(face_locations) > 1:
+            return jsonify({
+                'success': False, 
+                'message': 'Multiple faces detected. Please ensure only your face is in the frame.'
+            })
+        
+        # Get face location
+        face_location = face_locations[0]
+        top, right, bottom, left = face_location
+        
+        # Calculate face size as percentage of image
+        face_width = right - left
+        face_height = bottom - top
+        image_area = image_np.shape[0] * image_np.shape[1]
+        face_area = face_width * face_height
+        face_percentage = (face_area / image_area) * 100
+        
+        # Check if face is too small
+        if face_percentage < 10:
+            return jsonify({
+                'success': False, 
+                'message': 'Face is too small. Please move closer to the camera.'
+            })
+        
+        # Check if face is centered enough
+        center_x = image_np.shape[1] / 2
+        center_y = image_np.shape[0] / 2
+        face_center_x = (left + right) / 2
+        face_center_y = (top + bottom) / 2
+        
+        x_offset = abs(face_center_x - center_x) / (image_np.shape[1] / 2) * 100
+        y_offset = abs(face_center_y - center_y) / (image_np.shape[0] / 2) * 100
+        
+        if x_offset > 30 or y_offset > 30:
+            return jsonify({
+                'success': False, 
+                'message': 'Face is not centered. Please position your face in the center of the frame.'
+            })
+        
+        # Get face encoding
+        face_encodings = face_recognition.face_encodings(image_np, face_locations)
+        
+        if not face_encodings:
+            return jsonify({
+                'success': False, 
+                'message': 'Could not encode facial features. Please try again with better lighting.'
+            })
+        
+        # Determine quality based on face size
+        quality = "Excellent" if face_percentage > 25 else "Good" if face_percentage > 15 else "Acceptable"
+        
+        return jsonify({
+            'success': True,
+            'message': 'Face detected successfully',
+            'face_location': face_location,
+            'quality': quality
+        })
+        
+    except Exception as e:
+        print(f"Error in face detection: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error processing image: {str(e)}'})
+
 @bp.route('/update_biometric', methods=['POST'])
 @login_required
 def update_biometric():
@@ -76,28 +170,48 @@ def update_biometric():
             flash('No image captured')
             return redirect(url_for('profile.index'))
         
-        # Process the image
-        image_data = image_data.split(',')[1]
-        image = Image.open(io.BytesIO(base64.b64decode(image_data)))
-        image_np = np.array(image)
-        
-        # Convert RGB to BGR (for OpenCV)
-        image_np = image_np[:, :, ::-1]
-        
-        # Detect faces
-        face_locations = face_recognition.face_locations(image_np)
-        if not face_locations:
-            flash('No face detected. Please try again.')
+        try:
+            # Process the image
+            image_data = re.sub('^data:image/.+;base64,', '', image_data)
+            image_bytes = base64.b64decode(image_data)
+            image = Image.open(io.BytesIO(image_bytes))
+            
+            # Convert to RGB mode (important for face_recognition)
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+                
+            # Convert to numpy array
+            image_np = np.array(image)
+            
+            # Detect faces
+            face_locations = face_recognition.face_locations(image_np)
+            if not face_locations:
+                flash('No face detected. Please try again with better lighting and positioning.')
+                return redirect(url_for('profile.index'))
+            
+            # Get face encodings
+            face_encodings = face_recognition.face_encodings(image_np, face_locations)
+            
+            if not face_encodings:
+                flash('Could not encode facial features. Please try again with better lighting.')
+                return redirect(url_for('profile.index'))
+            
+            # Update face encoding
+            face_encoding_bytes = face_encodings[0].tobytes()
+            current_user.set_face_encoding(face_encoding_bytes)
+            
+            # Set preferred biometric to face if this is the first time registering
+            if not current_user.preferred_biometric:
+                current_user.preferred_biometric = 'face'
+            
+            db.session.commit()
+            
+            flash('Facial biometric data updated successfully')
+            
+        except Exception as e:
+            flash(f'Error processing facial biometric: {str(e)}')
+            print(f"Facial biometric error: {str(e)}")
             return redirect(url_for('profile.index'))
-        
-        # Get face encodings
-        face_encodings = face_recognition.face_encodings(image_np, face_locations)
-        
-        # Update face encoding
-        current_user.set_face_encoding(face_encodings[0].tobytes())
-        db.session.commit()
-        
-        flash('Facial biometric data updated successfully')
     
     elif biometric_type == 'fingerprint':
         fingerprint_data = request.form.get('fingerprint_data')
@@ -106,12 +220,15 @@ def update_biometric():
             return redirect(url_for('profile.index'))
         
         # Process the fingerprint data
-        # In a real implementation, this would involve proper fingerprint processing
-        # For this simulation, we'll just store the raw data
         fingerprint_bytes = base64.b64decode(fingerprint_data)
         
         # Update fingerprint data
         current_user.set_fingerprint_data(fingerprint_bytes)
+        
+        # Set preferred biometric to fingerprint if this is the first time registering
+        if not current_user.preferred_biometric:
+            current_user.preferred_biometric = 'fingerprint'
+        
         db.session.commit()
         
         flash('Fingerprint biometric data updated successfully')

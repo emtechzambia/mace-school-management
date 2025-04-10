@@ -9,6 +9,7 @@ import io
 import base64
 import numpy as np
 from datetime import timedelta
+import re
 
 @bp.route('/')
 def index():
@@ -77,42 +78,45 @@ def biometric_verification():
                 flash('No image captured')
                 return redirect(url_for('auth.biometric_verification'))
             
-            # Process the image
-            image_data = image_data.split(',')[1]
-            image = Image.open(io.BytesIO(base64.b64decode(image_data)))
-            image_np = np.array(image)
-            
-            # Convert RGB to BGR (for OpenCV)
-            image_np = image_np[:, :, ::-1]
-            
-            # Detect faces
-            face_locations = face_recognition.face_locations(image_np)
-            if not face_locations:
-                flash('No face detected. Please try again.')
-                return redirect(url_for('auth.biometric_verification'))
-            
-            # Get face encodings
-            face_encodings = face_recognition.face_encodings(image_np, face_locations)
-            
-            # Get stored encoding for current user
-            stored_encoding = current_user.get_face_encoding()
-            
-            if stored_encoding is None:
-                # First time login, store the encoding
-                current_user.set_face_encoding(face_encodings[0].tobytes())
-                db.session.commit()
-                flash('Facial biometric data registered successfully!')
+            try:
+                print("Processing facial verification...")
+                # Process the image
+                image_data = re.sub('^data:image/.+;base64,', '', image_data)
+                image_bytes = base64.b64decode(image_data)
+                image = Image.open(io.BytesIO(image_bytes))
                 
-                # Redirect to next page or default dashboard
-                next_page = session.pop('next_after_biometric', None)
-                if not next_page:
-                    next_page = url_for('auth.index')
-                return redirect(next_page)
-            else:
-                # Compare with stored encoding
-                matches = face_recognition.compare_faces([stored_encoding], face_encodings[0])
-                if matches[0]:
-                    flash('Facial biometric verification successful!')
+                # Convert to RGB mode (important for face_recognition)
+                if image.mode != 'RGB':
+                    image = image.convert('RGB')
+                    
+                # Convert to numpy array
+                image_np = np.array(image)
+                
+                # Detect faces
+                print("Detecting faces in image...")
+                face_locations = face_recognition.face_locations(image_np)
+                if not face_locations:
+                    flash('No face detected. Please try again with better lighting and positioning.')
+                    return redirect(url_for('auth.biometric_verification'))
+                
+                print(f"Found {len(face_locations)} face(s)")
+                
+                # Get face encodings
+                face_encodings = face_recognition.face_encodings(image_np, face_locations)
+                
+                if not face_encodings:
+                    flash('Could not encode facial features. Please try again with better lighting.')
+                    return redirect(url_for('auth.biometric_verification'))
+                
+                # Get stored encoding for current user
+                stored_encoding = current_user.get_face_encoding()
+                
+                if stored_encoding is None:
+                    print("No stored encoding found, registering new encoding")
+                    # First time login, store the encoding
+                    current_user.set_face_encoding(face_encodings[0].tobytes())
+                    db.session.commit()
+                    flash('Facial biometric data registered successfully!')
                     
                     # Redirect to next page or default dashboard
                     next_page = session.pop('next_after_biometric', None)
@@ -120,8 +124,52 @@ def biometric_verification():
                         next_page = url_for('auth.index')
                     return redirect(next_page)
                 else:
-                    flash('Facial biometric verification failed. Please try again.')
-                    return redirect(url_for('auth.biometric_verification'))
+                    print("Found stored encoding, comparing...")
+                    # Convert stored encoding bytes back to numpy array for comparison
+                    stored_encoding_np = np.frombuffer(stored_encoding, dtype=np.float64)
+                    
+                    # Reshape if needed to ensure proper dimensionality
+                    expected_shape = len(face_recognition.face_encodings(image_np)[0])
+                    if len(stored_encoding_np) != expected_shape:
+                        print(f"Warning: stored encoding shape mismatch. Expected {expected_shape}, got {len(stored_encoding_np)}")
+                        # Try to reshape to expected length or handle this case appropriately
+                        if len(stored_encoding_np) > expected_shape:
+                            stored_encoding_np = stored_encoding_np[:expected_shape]
+                        else:
+                            # Cannot compare if stored encoding is too small
+                            flash('Error with stored facial data. Please re-register your biometric data.')
+                            return redirect(url_for('auth.biometric_verification'))
+                    
+                    # Ensure the arrays are properly shaped for comparison
+                    print(f"Capture encoding shape: {face_encodings[0].shape}, Stored encoding shape: {stored_encoding_np.shape if hasattr(stored_encoding_np, 'shape') else 'unknown'}")
+                    
+                    # Calculate face distance
+                    try:
+                        face_distance = face_recognition.face_distance([stored_encoding_np], face_encodings[0])
+                        matches = face_recognition.compare_faces([stored_encoding_np], face_encodings[0], tolerance=0.6)
+                        
+                        print(f"Face distance: {face_distance[0]:.4f}, Match: {matches[0]}")
+                        
+                        if matches[0]:
+                            flash('Facial biometric verification successful!')
+                            
+                            # Redirect to next page or default dashboard
+                            next_page = session.pop('next_after_biometric', None)
+                            if not next_page:
+                                next_page = url_for('auth.index')
+                            return redirect(next_page)
+                        else:
+                            flash(f'Facial biometric verification failed (distance: {face_distance[0]:.3f}). Please try again or use another method.')
+                            return redirect(url_for('auth.biometric_verification'))
+                    except Exception as e:
+                        print(f"Error during face comparison: {str(e)}")
+                        flash(f'Error comparing facial data: {str(e)}')
+                        return redirect(url_for('auth.biometric_verification'))
+            
+            except Exception as e:
+                flash(f'Error in facial recognition: {str(e)}')
+                print(f"Facial recognition error: {str(e)}")
+                return redirect(url_for('auth.biometric_verification'))
         
         elif biometric_type == 'fingerprint':
             fingerprint_data = request.form.get('fingerprint_data')

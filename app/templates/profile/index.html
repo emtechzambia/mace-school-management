@@ -229,9 +229,9 @@
                                     <div class="tab-pane fade show active" id="face-data" role="tabpanel" aria-labelledby="face-data-tab">
                                         <p>Update your facial biometric data for login verification.</p>
                                         
-                                        <div class="position-relative mb-4">
-                                            <video id="video" autoplay></video>
-                                            <canvas id="canvas"></canvas>
+                                        <div class="position-relative mb-4">style="max-width: 640px; margin: 0 auto;">
+                                            <video id="video" autoplay></video>idth: 100%; height: auto; display: block; background-color: #000;"></video>
+                                            <canvas id="canvas"></canvas>dth: 100%; height: auto; display: none; background-color: #000;"></canvas>
                                         </div>
                                         
                                         <form method="POST" action="{{ url_for('profile.update_biometric') }}" id="faceForm">
@@ -247,29 +247,31 @@
                                             </div>
                                         </form>
                                         
-                                        <div class="alert alert-info">
+                                        <div class="alert alert-info" id="faceDetectionInfo">
                                             <i class="fas fa-info-circle me-2"></i>
                                             Make sure you are in a well-lit area and your face is clearly visible.
+                                        </div>
+                                        <div class="alert alert-warning d-none" id="faceDetectionStatus">
+                                            <i class="fas fa-info-circle me-2"></i></i>
+                                            <span id="faceDetectionMessage">Processing image...</span>
                                         </div>
                                     </div>
                                     
                                     <!-- Fingerprint Tab -->
                                     <div class="tab-pane fade" id="fingerprint-data" role="tabpanel" aria-labelledby="fingerprint-data-tab">
                                         <p>Register your fingerprint for biometric login.</p>
-                                        
                                         <div class="row mb-4">
                                             <div class="col-md-6 mx-auto">
                                                 <div class="fingerprint-scanner">
                                                     <i class="fas fa-fingerprint fingerprint-icon"></i>
                                                     <div class="fingerprint-status" id="fingerprintRegStatus"></div>
                                                 </div>
-                                                
                                                 <div class="text-center mb-3">
                                                     <p id="fingerprintRegMessage">Place your finger on the scanner</p>
                                                 </div>
                                             </div>
                                         </div>
-                                        
+                                                
                                         <form method="POST" action="{{ url_for('profile.update_biometric') }}" id="fingerprintForm">
                                             <input type="hidden" name="biometric_type" value="fingerprint">
                                             <input type="hidden" name="fingerprint_data" id="fingerprintData">
@@ -282,7 +284,6 @@
                                                 </button>
                                             </div>
                                         </form>
-                                        
                                         <div class="alert alert-info mt-3">
                                             <i class="fas fa-info-circle me-2"></i>
                                             Place your finger firmly on the scanner and hold it until the scan is complete.
@@ -291,10 +292,8 @@
                                 </div>
                                 
                                 <hr>
-                                
                                 <h5 class="mt-4">Preferred Biometric Method</h5>
                                 <p>Select your preferred biometric authentication method for login.</p>
-                                
                                 <form method="POST" action="{{ url_for('profile.update_biometric_preference') }}" class="row g-3">
                                     <div class="col-md-6 mb-3">
                                         <div class="biometric-option {% if current_user.preferred_biometric == 'face' %}active{% endif %}" id="face-option">
@@ -365,65 +364,198 @@
         const captureBtn = document.getElementById('captureBtn');
         const saveFaceBtn = document.getElementById('saveFaceBtn');
         const imageData = document.getElementById('imageData');
+        const faceDetectionStatus = document.getElementById('faceDetectionStatus');
+        const faceDetectionMessage = document.getElementById('faceDetectionMessage');
+        const faceDetectionInfo = document.getElementById('faceDetectionInfo');
         let stream = null;
+        
+        console.log('DOM loaded, camera elements initialized');
         
         // Start webcam when biometric tab is shown
         document.getElementById('biometric-tab').addEventListener('click', function() {
+            console.log('Biometric tab clicked, starting video');
             startVideo();
         });
         
         // Start webcam when face data tab is shown
         document.getElementById('face-data-tab').addEventListener('click', function() {
+            console.log('Face tab clicked, starting video');
             startVideo();
         });
         
+        // Handle tab visibility - start camera only when tab is visible
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.attributeName === 'class') {
+                    const faceDataTab = document.getElementById('face-data');
+                    if (faceDataTab.classList.contains('active') && 
+                        faceDataTab.classList.contains('show')) {
+                        console.log('Face tab is now visible');
+                        startVideo();
+                    } else {
+                        console.log('Face tab is not visible');
+                        stopVideo();
+                    }
+                }
+            });
+        });
+        
+        const faceDataTab = document.getElementById('face-data');
+        if (faceDataTab) {
+            observer.observe(faceDataTab, { attributes: true });
+            
+            // Check if tab is already visible
+            if (faceDataTab.classList.contains('active') && 
+                faceDataTab.classList.contains('show')) {
+                console.log('Face tab is initially visible');
+                setTimeout(startVideo, 500); // Delay to ensure DOM is ready
+            }
+        }
+        
         // Stop webcam when fingerprint data tab is shown
         document.getElementById('fingerprint-data-tab').addEventListener('click', function() {
+            console.log('Fingerprint tab clicked, stopping video');
             stopVideo();
         });
         
         // Stop webcam when account tab is shown
         document.getElementById('account-tab').addEventListener('click', function() {
+            console.log('Account tab clicked, stopping video');
             stopVideo();
         });
         
         // Access webcam
         async function startVideo() {
+            // If stream already exists, do nothing
+            if (stream && video.srcObject) {
+                console.log('Video stream already active');
+                return;
+            }
+            
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                console.log('Attempting to access webcam...');
+                
+                // Reset UI elements
+                canvas.style.display = 'none';
+                video.style.display = 'block';
+                saveFaceBtn.disabled = true;
+                captureBtn.classList.remove('btn-secondary');
+                captureBtn.classList.add('btn-primary');
+                captureBtn.innerHTML = '<i class="fas fa-camera me-2"></i>Capture';
+                faceDetectionStatus.classList.add('d-none');
+                faceDetectionInfo.classList.remove('d-none');
+                
+                // Request camera access
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                        facingMode: "user"
+                    } 
+                });
+                
+                console.log('Camera access granted');
                 video.srcObject = stream;
+                
+                // Set canvas dimensions after video metadata is loaded
+                video.onloadedmetadata = function() {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    console.log(`Video dimensions: ${video.videoWidth}x${video.videoHeight}`);
+                };
+                
+                // Ensure video plays
+                video.play().then(() => {
+                    console.log('Video playback started');
+                }).catch(error => {
+                    console.error('Error starting video playback:', error);
+                });
+                
             } catch (err) {
                 console.error('Error accessing webcam:', err);
-                alert('Error accessing webcam. Please make sure your camera is connected and permissions are granted.');
+                faceDetectionStatus.classList.remove('d-none');
+                faceDetectionStatus.classList.remove('alert-warning');
+                faceDetectionStatus.classList.add('alert-danger');
+                faceDetectionMessage.textContent = 'Error accessing webcam. Please make sure your camera is connected and permissions are granted.';
             }
         }
         
         // Stop webcam
         function stopVideo() {
             if (stream) {
-                stream.getTracks().forEach(track => track.stop());
+                console.log('Stopping video stream');
+                stream.getTracks().forEach(track => {
+                    console.log(`Stopping track: ${track.kind}`);
+                    track.stop();
+                });
                 video.srcObject = null;
+                stream = null;
+                
+                // Reset status elements
+                faceDetectionStatus.classList.add('d-none');
+                faceDetectionInfo.classList.remove('d-none');
+                
+                // Reset capture button
+                captureBtn.classList.remove('btn-secondary');
+                captureBtn.classList.add('btn-primary');
+                captureBtn.innerHTML = '<i class="fas fa-camera me-2"></i>Capture';
+                
+                // Disable save button
+                saveFaceBtn.disabled = true;
             }
         }
         
         // Capture image from webcam
         captureBtn.addEventListener('click', function() {
+            console.log('Capture button clicked');
+            
+            if (!stream || !video.srcObject) {
+                console.log('No active stream, starting video');
+                startVideo();
+                return;
+            }
+            
+            // Draw current video frame to canvas
             const context = canvas.getContext('2d');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            
+            // Ensure dimensions are set correctly
+            if (video.videoWidth) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                console.log(`Canvas set to: ${canvas.width}x${canvas.height}`);
+            } else {
+                console.log('Video dimensions not available, using defaults');
+                canvas.width = 640;
+                canvas.height = 480;
+            }
+            
+            // Draw the video frame to the canvas
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            console.log('Video frame captured to canvas');
             
-            // Convert canvas to base64 image data
-            const data = canvas.toDataURL('image/png');
-            imageData.value = data;
+            // Show the canvas (preview) and hide the video
+            video.style.display = 'none';
+            canvas.style.display = 'block';
             
-            // Enable save button
-            saveFaceBtn.disabled = false;
+            // Convert canvas to base64 image data (using JPEG for better compatibility)
+            const imageBase64 = canvas.toDataURL('image/jpeg', 0.9);
             
-            // Visual feedback
+            // Store in hidden input field
+            imageData.value = imageBase64;
+            console.log('Image captured and stored in form field');
+            
+            // Update UI
             captureBtn.classList.remove('btn-primary');
             captureBtn.classList.add('btn-secondary');
             captureBtn.innerHTML = '<i class="fas fa-redo me-2"></i>Recapture';
+            saveFaceBtn.disabled = false;
+            
+            // Show success message
+            faceDetectionStatus.classList.remove('d-none');
+            faceDetectionStatus.classList.remove('alert-danger');
+            faceDetectionStatus.classList.add('alert-success');
+            faceDetectionInfo.classList.add('d-none');
+            faceDetectionMessage.textContent = 'Image captured! Click "Save Facial Data" to register your biometric.';
         });
         
         // Fingerprint scanning simulation
@@ -445,7 +577,6 @@
             const interval = setInterval(() => {
                 progress += 10;
                 fingerprintRegMessage.textContent = `Scanning fingerprint... ${progress}%`;
-                
                 if (progress >= 100) {
                     clearInterval(interval);
                     
@@ -467,4 +598,3 @@
     });
 </script>
 {% endblock %}
-

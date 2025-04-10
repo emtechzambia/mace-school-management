@@ -37,12 +37,85 @@ class User(db.Model, UserMixin):
        return check_password_hash(self.password_hash, password)
    
    def set_face_encoding(self, encoding):
-       self.face_encoding = encoding
+       """Store facial encoding as binary data
+       
+       Args:
+           encoding: Either bytes or numpy array of face encoding
+       """
+       try:
+           if encoding is None:
+               self.face_encoding = None
+               return
+               
+           # Convert numpy array to bytes if needed
+           if isinstance(encoding, np.ndarray):
+               self.face_encoding = encoding.tobytes()
+           else:
+               # Assume it's already bytes
+               self.face_encoding = encoding
+               
+           # Verify we can read it back (validates format)
+           test_read = self.get_face_encoding()
+           if test_read is None:
+               print("Warning: Stored face encoding cannot be read back")
+       except Exception as e:
+           print(f"Error setting face encoding: {str(e)}")
+           self.face_encoding = None
        
    def get_face_encoding(self):
-       if self.face_encoding:
-           return np.frombuffer(self.face_encoding, dtype=np.float64)
-       return None
+       """Retrieve facial encoding as numpy array"""
+       if not self.face_encoding:
+           return None
+       
+       try:
+           # Convert bytes to numpy array
+           encoding_np = np.frombuffer(self.face_encoding, dtype=np.float64)
+           
+           # Verify shape/size is reasonable for face_recognition
+           # Most face_recognition models produce 128-dimensional feature vectors
+           if len(encoding_np) < 50 or len(encoding_np) > 200:
+               print(f"Warning: Face encoding has unusual dimensions: {len(encoding_np)}")
+               
+           return encoding_np
+       except Exception as e:
+           print(f"Error decoding face encoding: {str(e)}")
+           return None
+   
+   def verify_face(self, face_encoding, tolerance=0.6):
+       """Verify if the given face encoding matches the stored one
+       
+       Args:
+           face_encoding: Numpy array of the face to verify
+           tolerance: Threshold for face comparison (lower is stricter)
+           
+       Returns:
+           tuple: (is_match, distance) or (False, None) if no encoding stored
+       """
+       import face_recognition
+       
+       stored_encoding = self.get_face_encoding()
+       
+       if stored_encoding is None:
+           return False, None
+           
+       try:
+           # Ensure both encodings have compatible shapes
+           if len(stored_encoding) != len(face_encoding):
+               print(f"Warning: Encoding length mismatch. Stored: {len(stored_encoding)}, New: {len(face_encoding)}")
+               
+               # Try to use the smaller length
+               min_len = min(len(stored_encoding), len(face_encoding))
+               stored_encoding = stored_encoding[:min_len]
+               face_encoding = face_encoding[:min_len]
+           
+           # Calculate distance and match
+           face_distance = face_recognition.face_distance([stored_encoding], face_encoding)[0]
+           is_match = face_distance <= tolerance
+           
+           return is_match, face_distance
+       except Exception as e:
+           print(f"Error during face verification: {str(e)}")
+           return False, None
    
    def set_fingerprint_data(self, data):
        self.fingerprint_data = data
